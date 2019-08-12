@@ -3,6 +3,20 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#debug and test file
+mylog
+debug*
+normal_query
+log
+flag_file
+monitor_result
+db_records
+tempdata
+upload
+download
+config
+common_*
+
 # C extensions
 *.so
 
