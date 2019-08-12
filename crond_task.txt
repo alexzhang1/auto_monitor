@@ -1,0 +1,26 @@
+﻿#1,开盘前必须运行：
+#python trade_monitor_init.py，会初始化参数和fpga,db_init监控, 08:45启动。
+#2，盘中运行
+#python trade_monitor_tasks.py -t [task]
+#task=["self_monitor","mem","ps_port","db_trade","errorLog"],分别表示监控服务器自检，内存，进程和端口，盘中数据库，错误日志监控任务。
+#python trade_monitor_tasks.py -t self_monitor  ['08:59','09:59','10:59','11:59','12:59','13:59','14:59']
+#python trade_monitor_tasks.py -t mem  mem_monitor_minites = ['20','50']
+#python trade_monitor_tasks.py -t ps_port  ps_monitor_minites = ['10','20','30','40','50','00']
+#python trade_monitor_tasks.py -t db_trade  db_monitor_minites = ['26','36','46','56','06','16']
+#python trade_monitor_tasks.py -t errorLog  errorl_monitor_minites = ['10','20','30','40','50','00']
+
+45 8 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_init.py >> /dev/null 2>&1
+59 11,13 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t self_monitor >> /dev/null 2>&1
+29 10 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t self_monitor >> /dev/null 2>&1
+50 8-14 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t mem >> /dev/null 2>&1
+20 9-15 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t mem >> /dev/null 2>&1
+50 8-14 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t ps_port >> /dev/null 2>&1
+0,10,20,30,40,50 9-14 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t ps_port >> /dev/null 2>&1
+0,10,20,30 15 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t ps_port >> /dev/null 2>&1
+50 8 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t ps_port >> /dev/null 2>&1
+6,16,26,36,46,56 9,10,13,14 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t db_trade >> /dev/null 2>&1
+6,16,26 11 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t db_trade >> /dev/null 2>&1
+0,10,20,30,40,50 9-14 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t errorLog >> /dev/null 2>&1
+0,10,20,30 15 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t errorLog >> /dev/null 2>&1
+50 8 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor_tasks.py -t errorLog >> /dev/null 2>&1
+#47 8 * * 1-5 . ~/.bash_profile;cd /home/trade/monitor_server/py3env/bin;source ./activate;cd /home/trade/monitor_server/auto_monitor;python -u trade_monitor.py >> /dev/null 2>&1
