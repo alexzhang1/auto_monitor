@@ -56,6 +56,7 @@ import db_monitor as dbm
 import os
 import monitor_errorLog as mel
 import check_xwdm as cx
+import remote_file_check as rfc
 
 
 logger = logging.getLogger()
@@ -65,7 +66,7 @@ logger = logging.getLogger()
 #内存监控
 def ping_monitor_task():
 
-    linuxInfo = ct.get_server_config('./config/server_status_config.txt')
+    linuxInfo = ct.get_server_config('./config/server_ping_config.txt')
     try:
         ms = MonitorServer(linuxInfo)
         ms.ping_server_monitor()
@@ -225,32 +226,64 @@ def common_monitor_task(task, single_handle, linuxInfo):
 初始化csv文件席位代码检查
 '''    
 def xwdm_monitor_task():
-    try:
+
         linuxInfo = ct.get_server_config('./config/check_xwdm_config.txt')
         
         check_flag = 0
         for info in linuxInfo: 
-            hostip = info[0]
-            xwdm_check_col = info[6]
-            c_x = cx.check_csv_file(info)
-            error_list = c_x.check_xwdm()
-            if len(error_list) == 0:
-                logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
-                check_flag += 1
-            else:
-                logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
-                list_str = ';'.join(error_list)
-                msg = "系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
-                logger.error(msg)
-                ct.send_sms_control('xwdm', msg)
+            try:
+                hostip = info[0]
+                xwdm_check_col = info[6]
+                c_x = cx.check_csv_file(info)
+                error_list = c_x.check_xwdm()
+                if len(error_list) == 0:
+                    logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
+                    check_flag += 1
+                else:
+                    logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
+                    list_str = ';'.join(error_list)
+                    msg = "系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
+                    logger.error(msg)
+                    ct.send_sms_control('xwdm', msg)
+            except Exception:
+                logger.error("查询席位代码失败，出现异常，请查看服务器日志信息！", exc_info=True)
+                ct.send_sms_control('xwdm', "查询席位代码失败，出现异常，请查看服务器日志信息！")
 
-        if check_flag == len(linuxInfo):
+        if check_flag != 0 and check_flag == len(linuxInfo):
             logger.info(u"OK:检查客户席位代码成功!")
         else:
             logger.error(u"Error:检查客户席位代码失败!")
-    except Exception:
-        logger.error('Faild to check xwdm!', exc_info=True)
-        ct.send_sms_control('xwdm', "查询席位代码失败，出现异常，请查看服务器日志信息！")
+
+
+'''
+查看/home/trade/trade_share/sjdr各节点委托回传数据是否生成
+'''    
+def sjdr_monitor_task():
+
+        linuxInfo = ct.get_server_config('./config/check_sjdr_config.txt')
+        
+        check_flag = 0
+        for info in linuxInfo: 
+            try:
+                hostip = info[0]
+                file_checker = rfc.remote_file_check(info)
+                error_list = file_checker.check_sdjr()
+                if len(error_list) == 0:
+                    msg = "ok:系统 %s 盘后当天的节点委托回传数据检查成功" % hostip
+                    logger.info(msg)
+                    check_flag += 1
+                else:
+                    msg = "系统 %s 盘后当天的节点委托回传数据检查失败 失败的文件列表：%s " % (hostip, ';'.join(error_list))
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit', msg)
+                    
+            except Exception:
+                logger.error("查询席位代码失败，出现异常，请查看服务器日志信息！", exc_info=True)
+                ct.send_sms_control('xwdm', "查询席位代码失败，出现异常，请查看服务器日志信息！")
+        if check_flag != 0 and check_flag == len(linuxInfo):
+            logger.info(u"OK:检查盘后当天的节点委托回传数据成功!")
+        else:
+            logger.error(u"Error:检查盘后当天的节点委托回传数据失败!")
 
 
 
@@ -261,7 +294,6 @@ def cleanup_db_monitor_task():
         Jsonlist = json.load(f)
         logger.debug(Jsonlist)
     
-        logger.info("Start to excute the cleanup db monitor")
         thrlist = range(len(Jsonlist))
         threads=[]
         for (i,info) in zip(thrlist, Jsonlist):
@@ -289,11 +321,13 @@ def cleanup_db_monitor_task():
 #自己日志监控
 def self_log_monitor_task(log_file):
     logger.info("self_log_monitor_check msg")
-#    log_file = './mylog/trade_monitor_run.log'
+#    log_file = './mylog/non_trade_monitor_run.log'
     with open(log_file, "r") as f:
         lines = f.readlines()
         last_line = lines[-1]
     last_time_str = last_line.split(',')[0]
+    #暂停1秒防止一分钟运行2次
+    time.sleep(1)
     last_time = dt.datetime.strptime(last_time_str,"%Y-%m-%d %H:%M:%S")
     ntime = dt.datetime.now()
     delta_time = ntime - last_time
@@ -341,11 +375,12 @@ def main(argv):
                     task="core" means core file monitor  \n \
                     task="xwdm" means init VIP_GDH file xwdm check  \n \
                     task="cleanup" means db cleanup check  \n \
-                    task="errorLog" means file error log monitor  ' )            
+                    task="self_monitor" means self check monitor  \n \
+                    task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","errorLog"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","self_monitor"]:
                 logger.error("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -370,15 +405,20 @@ def main(argv):
             logger.info("Start to excute the xwdm check")
             xwdm_monitor_task()
         elif manual_task == 'cleanup':
-            logger.info("Start to excute the cleanup db check")
+            logger.info("Start to excute the cleanup db monitor")
             cleanup_db_monitor_task()
-#        elif manual_task == 'errorLog':
-#            logger.info("Start to excute the errorLog monitor")
-#            errorLog_monitor_task()
+        elif manual_task == 'sjdr':
+            logger.info("Start to excute the sjdr monitor")
+            sjdr_monitor_task()
+        elif manual_task == 'self_monitor':
+            logger.info("Start to excute the self monitor")
+            self_log_monitor_task(log_file)
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
 #            fpga_task()
 #            db_init_monitor_task()
+            sys.exit()
+            #自动监控暂时不做20190814，下面代码无效
             while True:
                      
                 start_time = '15:59'
@@ -417,7 +457,7 @@ def main(argv):
                     else:
                         logger.info("It's not time to excute the mem monitor")            
                     
-                    if (ct.time_check('08:31', '15:32')):
+                    if (ct.time_check('08:00', '15:32')):
                         logger.info("Exit non trade monitor")
                         break
                                    

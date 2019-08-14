@@ -536,7 +536,8 @@ class MonitorServer:
             #匹配网络路径
             matchObj = re.search( r'//.*?/', disklist[0], re.M|re.I)            
             #磁盘空间已用%>80报警，去掉mnt/cdrom和//ip/path这样的文件
-            if (disklist[0]!="/dev/sr0") and not(matchObj):                    
+            #if (disklist[0]!="/dev/sr0") and not(matchObj):   
+            if (disklist[0] not in ["/dev/sr0","/dev/sr1"]) and not(matchObj):                  
                 if Use_Rate < 80:
                     self.disk_info_verify = self.disk_info_verify and True
                     msg = "ok:" + hostip + "::" + disklist[0] + " ::The Use% is " + str(Use_Rate) + " % is ok"

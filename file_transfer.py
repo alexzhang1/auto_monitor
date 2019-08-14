@@ -7,7 +7,6 @@ Created on Mon Jun 10 15:48:34 2019
           下载远程Linux服务器的文件，支持单个和目录递归下载，会保存到指定目录下以服务器IP地址命名的文件目录下。
 """
 
-# -*- coding: utf-8 -*-
 import paramiko
 #import datetime
 import os

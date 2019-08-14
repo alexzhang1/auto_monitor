@@ -9,15 +9,15 @@ Created on Thu Jun 13 14:13:18 2019
 
 import paramiko
 import datetime as dt
-import os
+#import os
 import stat
 import time
 import re
 import sys
-import getopt
+#import getopt
 import logging
 import logging.config
-import yaml
+#import yaml
 import common_tools as ct
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
@@ -26,7 +26,7 @@ import common_tools as ct
 
 logger = logging.getLogger()
 
-class bachup_file_check:
+class backup_file_check:
     
     def __init__(self, info):
         
@@ -167,9 +167,13 @@ class bachup_file_check:
                     size_check = True
                     logger.info(self.hostip + u"检查备份文件成功！")
                 else:
-                    logger.error(u"error:服务器: %s 备份文件目录： %s 大小 %s 不正常!" % (self.hostip, filematch, filesize))
+                    msg = "error:服务器: %s 备份文件目录： %s 大小 %s 不正常!" % (self.hostip, filematch, filesize)
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             else:
-                logger.error(u"error: 没有找到服务器： %s 当天的备份目录:%s" % (self.hostip, filematch))
+                msg = "error: 没有找到服务器： %s 当天的备份目录:%s" % (self.hostip, filematch)
+                logger.error(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             #成功后取上一日的备份文件大小，需要和backupserver比较
             if size_check:
                 if self.filetype == 'W':
@@ -180,7 +184,9 @@ class bachup_file_check:
                         logger.debug(u"找到上一日的备份目录:", la_filesize)
                         self.last_filesize = la_filesize
                     else:
-                        logger.error(u"error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch))
+                        msg = "error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch)
+                        logger.error(msg)
+                        ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
                 else:
                     last_WorkDay_sz = self.last_WorkDay.replace('-','')
                     last_filematch = last_WorkDay_sz + '.tar.gz'
@@ -190,7 +196,9 @@ class bachup_file_check:
                         logger.debug(u"找到上一日的备份目录:", la_filesize)
                         self.last_filesize = la_filesize
                     else:
-                        logger.error(u"error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch))
+                        msg = "error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch)
+                        logger.error(msg)
+                        ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             else:
                 logger.info(u"当天没有检查成功不检查上日文件")
             sshClient.close()
@@ -222,7 +230,9 @@ class bachup_file_check:
                     logger.debug(u"找到上一日的备份目录:", la_filesize)
                     bs_fsz = la_filesize
                 else:
-                    logger.error(u"error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch))
+                    msg = "error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch)
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             else:
                 last_filematch = self.last_WorkDay.replace('-','') + '*'
                 last_filepath = self.remote_dir_h + '/' + last_filematch
@@ -231,14 +241,18 @@ class bachup_file_check:
                     logger.debug(u"找到上一日的备份目录:", la_filesize)
                     bs_fsz = la_filesize
                 else:
-                    logger.error(u"error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch))
+                    msg = "error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch)
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             sshClient.close()
             #比较备份服务器的上一日的备份文件大小 
             if bs_fsz != '' and bs_fsz >= self.last_filesize:
-                logger.info(u"备份服务器：%s的文件%s 大小: %s和原始备份文件大小: %s一致" % (self.hostip_h, last_filepath, bs_fsz, self.last_filesize))
+                logger.info(u"ok:备份服务器：%s的文件%s 大小: %s大于等于原始备份文件大小: %s" % (self.hostip_h, last_filepath, bs_fsz, self.last_filesize))
                 back_check = True
             else:
-                logger.error(u" error:备份服务器：%s的文件%s 大小 %s和原始服务器 %s 的备份文件大小%s不一致" % (self.hostip_h, last_filepath, bs_fsz, self.hostip, self.last_filesize))
+                msg = "error:备份服务器：%s的文件%s 大小 %s小于原始服务器 %s 的备份文件大小%s" % (self.hostip_h, last_filepath, bs_fsz, self.hostip, self.last_filesize)
+                logger.error(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             
         except Exception as e:
             logger.error(self.hostip + u" 检查备份文件异常，Exception: " + str(e))
@@ -248,7 +262,7 @@ class bachup_file_check:
 
 
     '''
-        上一交易日比较备份文件大小成功的话，删除生产服务器2个工作日之前的生成的备份数据文件。
+        上一交易日比较备份文件大小成功的话，删除生产服务器2个工作日之前的生成的备份数据文件。filetype == 'W'表示宛平的文件类型，处理方式不一样
     '''
     def del_before_2days_file(self):
         Last2WorkDay = self.getLast2WorkDay()
@@ -263,10 +277,14 @@ class bachup_file_check:
             rmfiledir = self.get_match_remote_dir_name(sftp, self.remote_dir, dir_namematch)
             logger.debug("rmfiledir:" + rmfiledir)
             if rmfiledir == '':
-                logger.error(u"error:没有匹配到服务器%s 两日前的备份目录% s" % (self.hostip, (self.remote_dir + '/' + dir_namematch)))
+                msg = "error:没有匹配到服务器%s 两日前的备份目录% s" % (self.hostip, (self.remote_dir + '/' + dir_namematch))
+                logger.error(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             else:
                 self.rm_remote_dir(sftp, rmfiledir)
-                logger.info(u"ok:删除原始备份服务器%s 备份目录: %s成功！" % (self.hostip, rmfiledir))
+                msg = "ok:删除原始备份服务器%s 备份目录: %s成功！" % (self.hostip, rmfiledir)
+                logger.info(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             t.close()
         else:
             #删除文件
@@ -277,9 +295,13 @@ class bachup_file_check:
             logger.debug("rmfile:" + rmfilename)
             try:
                 sftp.remove(rmfilename)
-                logger.info(u"ok:删除原始备份服务器%s 备份文件: %s成功！" % (self.hostip, rmfilename))
+                msg = "ok:删除原始备份服务器%s 备份文件: %s成功！" % (self.hostip, rmfilename)
+                logger.info(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             except Exception as e:
-                logger.error(u'error:删除文件%s 失败,错误原因：%s' % (rmfilename, str(e)))           
+                msg = "error:删除文件%s 失败,错误原因：%s" % (rmfilename, str(e))
+                logger.error(msg)
+                ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             t.close()
 
 def main(argv):
@@ -291,7 +313,7 @@ def main(argv):
         
         for info in linuxInfo:               
             
-            bfc = bachup_file_check(info)
+            bfc = backup_file_check(info)
             origin_check_flag = bfc.check_origin_file()
             back_check = False
             if origin_check_flag:

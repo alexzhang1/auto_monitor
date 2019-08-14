@@ -227,6 +227,7 @@ def main(argv):
                     task="mem" means memory monitor  \n \
                     task="db_trade" means db trading data monitor  \n \
                     task="errorLog" means file error log monitor  \n \
+                    task="self_monitor" means self check monitor  \n \
                     task="smss" means check the sms send status  \n \
                     task="sms0" means set sms total_count=0  \n \
                     task="sms100" means set sms total_count=100  \n \
