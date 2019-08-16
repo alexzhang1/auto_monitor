@@ -3,7 +3,7 @@
 Created on Fri May 27 15:01:34 2019
 
 @author: zhangwei
-@comment: 监控类方法，监控远程linux服务器的硬盘，内存，端口，进程，监控fpga文件大小。
+@comment: 监控类方法，监控远程linux服务器的硬盘，内存，端口，进程，监控fpga文件大小,ping等监控任务。
 """
 import paramiko
 import re
@@ -376,7 +376,7 @@ class MonitorServer:
         else:
     #        ping = subprocess.Popen('ping -i 0.2 -c 4 -q -I ' + src + ' ' + dest,
             #-I<网络界面> 使用指定的网络接口送出数据包
-            ping = subprocess.Popen('ping -i 0.2 -c 4 -q ' + hostip,
+            ping = subprocess.Popen('ping -i 1 -c 4 -q ' + hostip,
                                     shell=True,
                                     stderr=subprocess.PIPE,
                                     stdout=subprocess.PIPE) # 执行命令
@@ -399,8 +399,8 @@ class MonitorServer:
                 rtt = pres[4].split('/')[4] # 获取rtt avg值            
             except IndexError:
                 rtt = "9999"
-        # loss>0,rtt>200报警
-        if float(loss.strip('%')) > 0 or float(rtt) > 200 :
+        # loss>0,rtt>800报警
+        if float(loss.strip('%')) > 0 or float(rtt) > 800 :
             self.ping_info_verify = False
             msg = "error:" + hostip + " ::The ping lost is " + loss + " rtt is " + rtt + "ms"
             ct.write_log(error_log_file,msg)

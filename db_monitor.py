@@ -471,9 +471,9 @@ def cleanup_db_monitor(info):
 #            check_result = clean_db_check(info, cursor, conn)           
             serverip = info["serverip"]
             sql1 = "SELECT SUM(b.rows) FROM " + dbname + ".dbo.sysobjects a INNER JOIN " + dbname + ".dbo.sysindexes b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'"
-            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_transNum"
+            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_TransNum"
 #            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_SSEOrder"
-            logger.debug("sql1:" + sql1)
+            logger.info("sql1:" + sql1)
             logger.debug("sql2:" + sql2)
             (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
             (res2,des2) = mt.only_fetchall(cursor, conn, sql2) 
@@ -481,10 +481,10 @@ def cleanup_db_monitor(info):
             transNum_count =  int(res2[0][0])
 #            print(total_count, transNum_count)             
             if total_count == transNum_count:
-                logger.info("Ok: Check DBserver: %s all table total count: %d , t_transNum count: %d" % (serverip, total_count, transNum_count))
+                logger.info("Ok: Check DBserver: %s all table total count: %d , t_TransNum count: %d" % (serverip, total_count, transNum_count))
                 check_flag = True
             else:
-                msg = "Failed: Check DBserver: %s all table total count: %d , t_transNum count: %d" % (serverip, total_count, transNum_count)
+                msg = "Failed: Check DBserver: %s all table total count: %d , t_TransNum count: %d" % (serverip, total_count, transNum_count)
                 logger.error(msg)
                 check_flag = False
                 ct.send_sms_control('NoLimit', msg)
