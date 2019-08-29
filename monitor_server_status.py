@@ -825,15 +825,15 @@ class MonitorServer:
         cur_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         ct.write_file(result_file, cur_time + "::" + hostip + "_mem_info_result:")
         titlename="MemTotal,MemFree,MemAvailable,Buffers,Cached,SwapCached,SwapTotal,SwapFree,BuffersCachedRate,Rate_Mem"
-        logger.debug(titlename)
+        logger.info(titlename)
         ct.write_file(result_file, titlename)
         #计算b/cRate，RateMem
         BuffersCachedRate = round(100 * (int(Buffers) + int(Cached)) / float(MemTotal), 2)
-        logger.debug("BuffersCachedRate:" + str("%.2f" % BuffersCachedRate) + "%")
+        logger.info("BuffersCachedRate:" + str("%.2f" % BuffersCachedRate) + "%")
         Free_Mem = int(MemFree) + int(Buffers) + int(Cached)
         Used_Mem = int(MemTotal) - Free_Mem
         Rate_Mem = round(100 * Used_Mem / float(MemTotal),2)
-        logger.debug("Rate_Mem:" + str("%.2f" % Rate_Mem) + "%")
+        logger.info("Rate_Mem:" + str("%.2f" % Rate_Mem) + "%")
         tem_list = [MemTotal,MemFree,MemAvailable,Buffers,Cached,SwapCached,SwapTotal,SwapFree,BuffersCachedRate,Rate_Mem]
         temp = map(str,tem_list)
         memstr=','.join(temp)
@@ -854,7 +854,7 @@ class MonitorServer:
                 #清理缓存
                 command_clear = 'sync;echo 3 > /proc/sys/vm/drop_caches'
                 sshRes_clear = self.sshExecCmd(command_clear)
-                logger.info("sshRes_clear:" + sshRes_clear)
+                logger.debug(sshRes_clear)
                 #再次检查一次
                 sshRes = self.sshExecCmd(command)
                 mem_values = re.findall("(\d+)\ kB", ",".join(sshRes))
@@ -870,11 +870,11 @@ class MonitorServer:
                 cur_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 ct.write_file(result_file, cur_time + "::" + hostip + "_mem_info_result:")
                 titlename="MemTotal,MemFree,MemAvailable,Buffers,Cached,SwapCached,SwapTotal,SwapFree,BuffersCachedRate,Rate_Mem"
-                logger.debug(titlename)
+                logger.info(titlename)
                 ct.write_file(result_file, titlename)
                 #计算b/cRate，RateMem
                 BuffersCachedRate = round(100 * (int(Buffers) + int(Cached)) / float(MemTotal), 2)
-                logger.debug("BuffersCachedRate:" + str("%.2f" % BuffersCachedRate) + "%")
+                logger.info("BuffersCachedRate:" + str("%.2f" % BuffersCachedRate) + "%")
                 #如果还大于等于50，则报警
                 if BuffersCachedRate >= 50:
                     self.mem_info_verify = False

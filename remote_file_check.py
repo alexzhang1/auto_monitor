@@ -126,7 +126,8 @@ class remote_file_check:
 
         
 def main(argv):
-  
+    
+    #默认是check_sjdr的监控检查
     try:
         yaml_path = './config/check_sjdr_logger.yaml'
         ct.setup_logging(yaml_path)

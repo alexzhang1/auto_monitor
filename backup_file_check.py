@@ -299,7 +299,7 @@ class backup_file_check:
                 logger.info(msg)
                 ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             except Exception as e:
-                msg = "error:删除文件%s 失败,错误原因：%s" % (rmfilename, str(e))
+                msg = "error:删除原始备份服务器%s 文件%s 失败,错误原因：%s" % (self.hostip, rmfilename, str(e))
                 logger.error(msg)
                 ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
             t.close()

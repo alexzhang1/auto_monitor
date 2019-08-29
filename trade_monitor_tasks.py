@@ -133,6 +133,17 @@ def db_trade_monitor_task():
 def errorLog_monitor_task():
     
     linuxInfo = ct.get_server_config('./config/server_logDir_config.txt')
+    ntimes = dt.datetime.now().strftime("%Y%m%d%H%M%S") 
+    ndates = dt.datetime.now().strftime("%Y%m%d")      
+    #cur_dir_i = os.getcwd()
+    cur_dir = os.getcwd().replace("\\","/") + "/"
+    log_dir = cur_dir + "mylog/"
+    grep_result_file = log_dir + "errorLog_result_" + ndates + '.txt'
+    back_file = log_dir + "errorLog_result_" + ntimes + '.txt'
+    #备份上一次的grep_result_file文件到back_file
+    if (os.path.exists(grep_result_file)):
+    	os.rename(grep_result_file, back_file)
+        
     grep_lists = mel.get_errorLog(linuxInfo)
     fileNlist = mel.get_result_file_list()
     check_flag = mel.errorLog_check(fileNlist, grep_lists)

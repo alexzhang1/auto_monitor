@@ -52,12 +52,15 @@ def get_errorLog(linuxInfo):
         servername = info[4]
         filedir = info[5]
     
-        logger.info(servername + "::" + hostip + "get errorLog")
+        logger.info(servername + "::" + hostip + " get errorLog")
         try:
             ssh=paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(hostip, port, username, password)
             command = 'egrep -i "error|warning|critical" ' + filedir + ' | egrep -iv "errorid=0|error_code: 4294856287|ERROR woker id"'
+            filename = "SZSESyslog.log"
+            if filename == "SZSESyslog.log":
+                command = 'egrep -i "on_connected" ' + filedir
             stdin,stdout,stderr = ssh.exec_command(command)
             #egrep -i "error|warning|critical" /home/trade/myproject/log/* | egrep -iv "errorid=0|error_code: 4294856287|ERROR woker id"
             stdoutstr = stdout.read().decode('utf-8')

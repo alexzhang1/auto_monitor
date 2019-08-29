@@ -125,7 +125,9 @@ class check_csv_file:
                 if (xwdm_item[1] not in check_column):
                     error_kh_list.append(xwdm_item)
         else:
-            logger.error(u"error: 没有取到服务器 %s GDH文件 %s，请检查文件路径是否正确！" % (self.hostip, filepath))
+            msg = "error: 没有取到服务器 %s GDH文件 %s，请检查文件路径是否正确！" % (self.hostip, filepath)
+            logger.error(msg)
+            ct.send_sms_control('xwdm', msg)
             error_kh_list=[[999,999]]
         
         return error_kh_list
