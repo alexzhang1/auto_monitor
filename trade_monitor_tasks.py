@@ -17,6 +17,12 @@ Created on 2019-07-16 15:36:39
 ###### 先检查确定会有问题的报警类型，先检查部分组件。
 ##### 7.fpga文件检查
 ###### fpga文件目录下检查文件报警。
+##### 8.关闭短信功能
+#####"smss"：查看状态,"sms0"：关闭,"sms100"：打开
+##### 9.mdapi行情查询监控
+##### 通过api连接后查询行情数据是否正确。
+##### 10.traderapi行情查询监控
+##### 通过traderapi连接后查询行情数据是否正确。
 """
 
 import time
@@ -32,6 +38,9 @@ import json
 import db_monitor as dbm
 import os
 import monitor_errorLog as mel
+import mdapi_monitor as mdt
+import traderapi_monitor as tdm
+
 
 
 logger = logging.getLogger()
@@ -129,6 +138,57 @@ def db_trade_monitor_task():
                     ct.readTexts("Database trading Worning")
 
 
+#通过mdapi行情查询检查
+def mdapi_monitor_qry_task():
+    
+    with open('./config/api_monitor_config.json', 'r') as f:
+        JsonData = json.load(f)
+    
+    try:
+        res_flag = 0
+        for PyMdApi_CheckData in JsonData['PyMdApi']:
+#        PyMdApi_CheckData = JsonData['PyMdApi']
+            md_test = mdt.mdapi_monitor(PyMdApi_CheckData)
+            res = md_test.monitor_market_data()
+            res_flag += res
+        if res_flag == len(JsonData['PyMdApi']):
+            msg = "Ok,所有服务器mdapi行情查询返回结果正确！"
+            logger.info(msg)
+            ct.send_sms_control("NoLimit", msg)
+        else:
+            logger.info("Error: 有服务器mdapi行情查询返回结果不正确！")
+    except Exception as e:
+        msg = str(e)
+        logger.error("mdapi monitor 异常：" + msg)
+
+
+
+#通过traderapi行情查询检查qry_markat_data
+def traderapi_QMD_monitor_task():
+    
+    with open('./config/api_monitor_config.json', 'r') as f:
+        JsonData = json.load(f)
+    
+    try:
+        TraderApi_CheckData = JsonData['PyTraderApi']
+        res_flag = 0
+        for CheckData in TraderApi_CheckData:                
+            check_flag = tdm.run_app("qry_market_data", CheckData)
+            res_flag += check_flag
+        if res_flag == len(TraderApi_CheckData):
+            msg = "Ok,所有服务器 traderapi行情查询 返回结果正确！"
+            logger.info(msg)
+            ct.send_sms_control("NoLimit", msg)
+        else:
+            logger.info("Error: 有服务器 traderapi行情查询 返回结果不正确！")
+    except Exception as e:
+        msg = str(e)
+        logger.error("mdapi monitor 异常：" + msg)
+
+
+
+
+
 #日志错误监控
 def errorLog_monitor_task():
     
@@ -205,8 +265,6 @@ def init_data():
 
 
 
-
-
 def main(argv):
     
     try:
@@ -233,11 +291,13 @@ def main(argv):
                 print('python trade_monitor.py -t <task>\n \
                     parameter -t comment: \n \
                     use -t can input the manul single task.\n \
-                    task=["ps_port","mem","fpga","db_init","db_trade","errorLog"].  \n \
+                    task=["ps_port","mem","fpga","db_init","db_trade","mdapi_qry","traderapi_qmd","errorLog"].  \n \
                     task="ps_port" means porcess and port monitor  \n \
                     task="mem" means memory monitor  \n \
                     task="db_trade" means db trading data monitor  \n \
                     task="errorLog" means file error log monitor  \n \
+                    task="mdapi_qry" means mdapi qry market data monitor  \n \
+                    task="traderapi_qmd" means mdapi qry market data monitor  \n \
                     task="self_monitor" means self check monitor  \n \
                     task="smss" means check the sms send status  \n \
                     task="sms0" means set sms total_count=0  \n \
@@ -252,7 +312,7 @@ def main(argv):
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","self_monitor","smss","sms0","sms100"]:
+            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","self_monitor","smss","sms0","sms100"]:
                 logger.error("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -273,6 +333,12 @@ def main(argv):
         elif manual_task == 'errorLog':
             logger.info("Start to excute the errorLog monitor")
             errorLog_monitor_task()
+        elif manual_task == 'mdapi_qry':
+            logger.info("Start to excute the mdapi qry_market_data monitor")
+            mdapi_monitor_qry_task()
+        elif manual_task == 'traderapi_qmd':
+            logger.info("Start to excute the traderapi qry_market_data monitor")
+            traderapi_QMD_monitor_task()
         elif manual_task == 'smss':
             logger.info("查看发送短信状态")
             ct.sms_switch('status')

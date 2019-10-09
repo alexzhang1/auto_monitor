@@ -82,7 +82,7 @@ class backup_file_check:
             return False
 
 
-    #递归删除目录
+    #递归删除目录,包含自己目录
     def rm_remote_dir(self, sftp, path):
         files = sftp.listdir(path=path)
     

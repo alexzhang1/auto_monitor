@@ -52,7 +52,7 @@ def fpga_task():
 
     logger.info("************************The FPGA File Monitor Result: ************************")
     if check_result:
-        logger.info("FPGA Server is OK")
+        logger.info("OK,FPGA Server is OK")
         ct.send_sms_control("fpga", "OK:盘前FPGA文件检查正常")
     else:
         msg = "error:FPGA文件检查异常，请查看详细日志"

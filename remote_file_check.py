@@ -14,6 +14,10 @@ import time
 #import getopt
 import logging
 import common_tools as ct
+import paramiko
+import stat
+import re
+import pandas as pd
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 
@@ -29,11 +33,24 @@ class remote_file_check:
         self.username = info[2]
         self.password = info[3]
 #        servername = info[4]
-        self.remote_dir = info[5]   
+        if info[5]:
+            self.remote_dir = info[5]   
         #xwdm检查专用列
-        self.xwdm_check_col = info[6]        
+        if info[6]:
+            self.xwdm_check_col = info[6]  
+        if info[7]:
+            self.follow_hostip = info[7]
+        if info[8]:
+            self.follow_port = int(info[8])
+        if info[9]:
+            self.follow_username = info[9]
+        if info[10]:
+            self.follow_password = info[10]
+        if info[11]:
+            self.follow_dir = info[11]
         #获得当天日期字符串
-        self.local_date = dt.datetime.today().strftime('%Y%m%d')           
+        self.local_date = dt.datetime.today().strftime('%Y%m%d')
+        self.next_date = (dt.datetime.today()+dt.timedelta(1)).strftime('%Y%m%d')
         self.sshClient = ct.sshConnect(self.hostip, self.port, self.username, self.password)
 
 
@@ -100,7 +117,7 @@ class remote_file_check:
         #command = 'cat /home/trade/temp/20190617/VIP_GDH20190403.csv | awk -F"' + ',"' + " '{OFS=\",\";print $1,$5}'"
         #cat /home/trade/temp/20190617/VIP_GDH20190403.csv | awk -F"," '{OFS=",";print $1,$5}'
         command = "cat " + filepath + " | awk -F\",\" \'{OFS=\",\";print $1,$5}\'"
-        logger.debug("command:" + command)
+        logger.debug(command)
        
         sshRes = []
         sshRes = ct.sshExecCmd(self.sshClient, command)
@@ -123,6 +140,97 @@ class remote_file_check:
             error_kh_list=[[999,999]]
         
         return error_kh_list
+
+
+
+    # ------获取远端linux主机上的文件是否是文件夹
+    def get_remote_isdir(self, sftp, path):
+        try:
+            return stat.S_ISDIR(sftp.stat(path).st_mode)
+        except IOError:
+            return False
+
+    #递归删除目录下所有文件及文件夹，不包含自己目录
+    def rm_remote_dir(self, sftp, path):
+        files = sftp.listdir(path=path)
+    
+        for f in files:
+            filepath = path + '/' + f
+            if self.get_remote_isdir(sftp, filepath):
+                self.rm_remote_dir(sftp, filepath)
+            else:
+                #print 'filepath:',  filepath
+                sftp.remove(filepath)    
+#        sftp.rmdir(path)
+
+
+
+    '''
+    ###### 先清除历史文件/home/trade/run/timaker_hx/follow，
+    ###### 远程获取文件home/assess/csvfiles/{ndate+1}*.csv，
+    ###### 并上传到指定目录/home/trade/run/timaker_hx/follow
+    ###### 校验文件内容是否有重复的记录。
+    '''
+    def check_follow(self):
+        
+        #先清除历史文件/home/trade/run/timaker_hx/follow
+        t = paramiko.Transport((self.hostip, self.port))
+        t.connect(username=self.username, password=self.password)
+        sftp = paramiko.SFTPClient.from_transport(t)
+        self.rm_remote_dir(sftp, self.remote_dir)
+        #上传跟投文件到服务器
+        #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow        
+        #command = "scp " + self.follow_username + "@" + self.follow_hostip + ":" + self.follow_dir + self.next_date + "* " + self.remote_dir
+        #command = "scp " + self.follow_username + "@" + self.follow_hostip + ":" + self.follow_dir + "FollowSecurity_" + "\*$" + self.next_date + ".csv " + self.remote_dir
+        command = "scp " + self.follow_username + "@" + self.follow_hostip + ":" + self.follow_dir + "FollowSecurity_" + self.next_date + ".csv " + self.remote_dir
+        logger.info(command)
+        sshRes = ct.sshExecCmd(self.sshClient, command)
+#        print("sshRes:",sshRes)
+        ct.sshClose(self.sshClient)
+        #等待2s防止文件没有上传成功
+        time.sleep(2)
+        #匹配文件，并校验文件内容是否有重复的记录
+        sshClient = ct.sshConnect(self.hostip, self.port, self.username, self.password)
+        #command2 = "ls " + self.remote_dir + self.next_date + "*"
+        command2 = "ls '" + self.remote_dir + "FollowSecurity_" + self.next_date + ".csv'"
+        logger.info(command2)
+        sshRes2 = ct.sshExecCmd(sshClient, command2)
+        #print("sshRes2:",sshRes2)
+        if len(sshRes2)==1:
+            ffilename = sshRes2[0]
+            command3 = "cat " + ffilename + " | awk -F\",\" \'{OFS=\",\";print $1}\'"
+            #command3 = "cat " + "'" + self.remote_dir + "FollowSecurity_$" + self.next_date + ".csv'" + " | awk -F\",\" \'{OFS=\",\";print $1}\'"
+            sshRes3 = ct.sshExecCmd(sshClient, command3)
+            #print("sshRes3:",sshRes3)
+            if sshRes3 == []:
+                msg = "Error: 跟投文件[%s]内容为空" % ffilename
+                logger.error(msg)
+                filename = msg
+            else:
+                df = pd.DataFrame(sshRes3[1:],columns={sshRes3[0]})
+                #print("length:", len(df))
+                if len(df) != 0 :
+                    if len(df[df.duplicated()]) == 0:
+                        filename = sshRes2[0]
+                    else:
+                        dup_df = df[df.duplicated()]
+                        dup_list = list(dup_df[sshRes3[0]])
+                        dup_str = ','.join(dup_list)
+                        msg = "跟投文件[%s]有重复的证券代码记录[%s]" % (ffilename, dup_str)
+                        logger.error(msg)
+                        filename = "Error: " + msg
+                else:
+                    msg = "Error: 跟投文件[%s]内容为空" % ffilename
+                    logger.error(msg)
+                    filename = msg
+        elif len(sshRes2)==0:
+            #temstr = ",".join(sshRes2)
+            filename = "Error:没有匹配到跟投文件"
+        else:
+            filename = "Error:跟投文件匹配多个，" + ",".join(sshRes2)
+        ct.sshClose(sshClient)
+        return filename
+    
 
         
 def main(argv):

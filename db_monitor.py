@@ -354,7 +354,8 @@ def check_remote_csv_ZJXX(info, cursor, conn):
     check_flag = False
     #获取csv文件中的ZJZH,KYJE
     zjxxfile_path = csv_remote_dir + '/' + "VIP_ZJXX" + ndates + ".csv"
-    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $3,$7}\'"
+    #20190916加入列5，ZZHBZ
+    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $3,$5,$7}\'"
 #    zjxxfile_path = '/home/trade/temp/debugkhh.csv'
 #    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $1,$2}\'"
     logger.debug("command:" + command)
@@ -382,16 +383,20 @@ def check_remote_csv_ZJXX(info, cursor, conn):
         zjxx_df.set_index('ZJZH', inplace=True)
 #        for index, row in zjxx_df.iterrows():
 #            print index, row['KYJE']
-        logger.debug("The csv KYJE:")
-        logger.debug(zjxx_df)
-        #把结尾是'11'的资金账号过滤掉
-        index_filter = filter(lambda x: x[-2:] != '11', zjxx_df.index)
-        logger.debug('index_filter:')
-        logger.debug(index_filter)
-        zjxx_filter_df = zjxx_df.loc[index_filter]
-        logger.debug("zjxx_filter_df")
-        logger.debug(zjxx_filter_df)
-        #df.loc[df['column_name'] != some_value]
+        logger.info("The csv KYJE:")
+        logger.info(zjxx_df)
+#        #把结尾是'11'的资金账号过滤掉
+#        index_filter = filter(lambda x: x[-2:] != '11', zjxx_df.index)
+#        logger.debug('index_filter:')
+#        logger.debug(index_filter)
+#        zjxx_filter_df = zjxx_df.loc[index_filter]
+        #把ZZHBZ为0的过滤掉
+        zjxx_filter_df = zjxx_df.loc[zjxx_df['ZZHBZ']!='0']
+        logger.info("zjxx_filter_df")
+#        logger.info(zjxx_filter_df)
+        #20190916不用的列ZZHBZ删除掉
+        zjxx_filter_df = zjxx_filter_df.drop(columns='ZZHBZ')
+        logger.info(zjxx_filter_df)
         
         #获取数据库数据       
         sql = "SELECT [AccountID],[UsefulMoney],[FrozenCash],[FrozenCommission] FROM [" + dbname + "].[dbo].[t_TradingAccount]"
@@ -423,7 +428,9 @@ def check_remote_csv_ZJXX(info, cursor, conn):
                 logger.info("UsefulMoney not equal KYJE, the ZJZH is: %s, Difference is: %.2f" % (index, round(row['InOutMoney'], 2)))
                 TransferMoney = round(get_cust_TransferMoney(info, index, cursor, conn), 2)
                 logger.info("ZJZH %s transfer money is: %.2f" % (index, TransferMoney))
-                final_diff = TransferMoney - row['InOutMoney']
+                final_diff = TransferMoney - round(row['InOutMoney'], 2)
+                logger.info("final_diff:")
+                logger.info(final_diff)
                 #因为每笔委托会冻结0.1元，不体现在总冻结里,额外冻结资金设置一个数，小于这个数不报警，认为这个是被委托冻结了。
                 extra_frozen = 10.0
                 #比较资金差额和出入金，一致的话则没有问题。 
@@ -431,11 +438,13 @@ def check_remote_csv_ZJXX(info, cursor, conn):
                     logger.info("The Difference equal to TransferMoney")
                     check_count += 1
                 #因为每笔委托会冻结0.1元，不体现在总冻结里，所以要单独处理。
+                #elif final_diff > 0 and final_diff < extra_frozen:
                 elif final_diff > 0 and final_diff < extra_frozen:
                     logger.info("The Difference extra_frozen %.2f" % final_diff)
                     check_count += 1
                 else:
-                    msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney,Difference is: %.2f" % (index, serverip, round(row['InOutMoney'], 2))
+                    #msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney,Difference is: %.2f" % (index, serverip, round(row['InOutMoney'], 2))
+                    msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney, TransferMoney is %.2f,Difference is: %.2f" % (index, serverip, TransferMoney,round(row['InOutMoney'], 2))
                     logger.error(msg)
                     ct.send_sms_control('db_init', msg)
             check_flag = (check_count == len(def_khje))

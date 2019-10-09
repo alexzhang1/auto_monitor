@@ -267,7 +267,7 @@ class MonitorServer:
 #            hostip = info[0]
 #            port = info[1]
         username = 'root'
-        password = '123.com'
+        password = 'root123'
 #            servername = info[4]
         logger.info("The mem monitor Starting...")
         for info in self.linuxInfo:
@@ -750,12 +750,12 @@ class MonitorServer:
             logger.info("******************************FPGA Monitor: [server:%s]*********************************"% hostip)
             cur_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             ct.write_file(result_file,cur_time + "::" + hostip + "_ps_info_result:")
-    #        print "sshResLists:\n", sshResLists
+#            print("sshResLists:\n", sshResLists)
             titlename="TypePermission,ConnectedCount,Owner,Group,Size,ModifyMonth,ModifyDate,ModifyTime,FName"
             logger.debug(titlename)
             ct.write_file(result_file,titlename)
             #从第二行开始
-            fileSize_dict = {'sent0':None,'recieved0':None,'recieved1':None}
+            fileSize_dict = {'sent0':None,'received0':None,'received1':None}
             for datalist in sshResLists[1:]:
                 lsstr=','.join(datalist)
                 logger.debug(lsstr)
@@ -773,19 +773,19 @@ class MonitorServer:
                     
                     if str1 == FName:
                         fileSize_dict['sent0'] = Size
-                        
+#                        print("Fname:",FName,Size)                        
                     if str2 == FName:
                         fileSize_dict['received0'] = Size
-                        
+#                        print("Fname:",FName,Size)
                     if str3 == FName:
                         fileSize_dict['received1'] = Size
-                            
+#                        print("Fname:",FName,Size)    
             logger.info(fileSize_dict)
             ntime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             dictstr = ntime + "::FPGA file size: " + str(fileSize_dict)
             ct.write_file(result_file, dictstr)
 #            self.fpga_file_info_verify = (fileSize_dict['sent0'] or fileSize_dict['sent1']) and (fileSize_dict['journal0'] or fileSize_dict['journal1']) and (fileSize_dict['received0'] or fileSize_dict['received1'])
-            self.fpga_file_info_verify = (fileSize_dict['sent0'] and (fileSize_dict['received0'] or fileSize_dict['received1']))
+            self.fpga_file_info_verify = (fileSize_dict['sent0'] and (fileSize_dict['received0'] and fileSize_dict['received1']))
             if self.fpga_file_info_verify:
                 msg = "ok: The server %s FPGA Monitor is ok, %s " % (hostip, dictstr)
                 logger.info(msg)
@@ -866,7 +866,7 @@ class MonitorServer:
                 SwapCached = mem_values[5]
                 SwapTotal = mem_values[14]
                 SwapFree = mem_values[15]
-                logger.info('******************************Mem Monitor: [server:%s]*********************************' % hostip)
+                logger.info('******************************Mem Monitor2: [server:%s]*********************************' % hostip)
                 cur_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 ct.write_file(result_file, cur_time + "::" + hostip + "_mem_info_result:")
                 titlename="MemTotal,MemFree,MemAvailable,Buffers,Cached,SwapCached,SwapTotal,SwapFree,BuffersCachedRate,Rate_Mem"

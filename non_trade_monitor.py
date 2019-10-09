@@ -22,7 +22,8 @@ Created on 2019-07-26 10:01:58
 
 ##### 6.备份文件检查
 
-###### 使用目前写好的脚本，下午五点执行。
+###### 检查备份当天文件是否存在，大小是否正常。再检查前一天的数据；  
+###### 正常的话删除2天前的文件，只保留2天的备份文件。周一删除5天前的文件，周二删除4天前的文件，下午五点执行。
 
 ##### 7.download库清库是否完成
 
@@ -39,6 +40,21 @@ Created on 2019-07-26 10:01:58
 ##### 10.盘后委托数据是否生成
 
 ###### 查看/home/trade/trade_share/sjdr各节点回传数据是否生成。
+
+##### 11.盘后清库检查
+
+###### 检查数据库除了表dbo.t_transNum以外的数据库数据是否被清除。
+
+##### 12.ssh连接检查
+
+###### 通过对服务器的ssh连接，目的是验证密码是否被客户更改掉，或者机器是否连通。
+
+##### 13.跟投费率优惠文件检查
+
+###### 先清除历史文件/home/trade/run/timaker_hx/follow，
+###### 远程获取文件home/assess/csvfiles/FollowSecurity_{ndata+1}.csv，
+###### 并上传到指定目录/home/trade/run/timaker_hx/follow
+###### 校验文件内容是否有重复的记录。
 """
 
 
@@ -236,18 +252,26 @@ def xwdm_monitor_task():
                 xwdm_check_col = info[6]
                 c_x = cx.check_csv_file(info)
                 error_list = c_x.check_xwdm()
+                print("error_list:", error_list)
+                temp_list = []
+                for item in error_list:
+                    temp_list.append('::'.join(item))
+                
                 if len(error_list) == 0:
                     logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
                     check_flag += 1
                 else:
-                    logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
-                    list_str = ';'.join(error_list)
-                    msg = "系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
-                    logger.error(msg)
-                    ct.send_sms_control('xwdm', msg)
+                    if error_list == [['999','999']]:
+                        logger.error("Error:查询系统 %s席位代码失败，csv文件不存在" % hostip)
+                    else:
+                        logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
+                        list_str = ';'.join(temp_list)
+                        msg = "Error:系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
+                        logger.error(msg)
+                        ct.send_sms_control('xwdm', msg)
             except Exception:
                 logger.error("查询席位代码失败，出现异常，请查看服务器日志信息！", exc_info=True)
-                ct.send_sms_control('xwdm', "查询席位代码失败，出现异常，请查看服务器日志信息！")
+                ct.send_sms_control('xwdm', "Error:查询席位代码失败，出现异常，请查看服务器日志信息！")
 
         if check_flag != 0 and check_flag == len(linuxInfo):
             logger.info(u"OK:检查客户席位代码成功!")
@@ -285,9 +309,40 @@ def sjdr_monitor_task():
         else:
             logger.error(u"Error:检查盘后当天的节点委托回传数据失败!")
 
+'''
+跟投csv文件检查
+'''
+def follow_monitor_task():
+    
+        linuxInfo = ct.get_server_config('./config/check_follow_config.txt')
+        
+        check_flag = 0
+        for info in linuxInfo: 
+            try:
+                hostip = info[0]
+                file_checker = rfc.remote_file_check(info)
+                res_file = file_checker.check_follow()
+                if res_file[:5] != 'Error':
+                    msg = "ok:系统 %s 跟投费率优惠文件检查成功，文件名[%s]" % (hostip,res_file)
+                    logger.info(msg)
+                    check_flag += 1
+                    ct.send_sms_control('NoLimit', msg)
+                else:
+                    msg = "Error:系统 %s 跟投费率优惠文件检查失败 失败的原因：%s" % (hostip, res_file[6:])
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit', msg)
+                    
+            except Exception:
+                logger.error("Error:跟投费率优惠文件检查失败，出现异常，请查看服务器日志信息！", exc_info=True)
+                ct.send_sms_control('NoLimit', "跟投费率优惠文件失败，出现异常，请查看服务器日志信息！")
+        if check_flag != 0 and check_flag == len(linuxInfo):
+            logger.info(u"OK:跟投费率优惠文件数据成功!")
+        else:
+            logger.error(u"Error:跟投费率优惠文件检查数据失败!")
 
-
+'''
 #盘后数据库清库检查
+'''
 def cleanup_db_monitor_task():
     
     with open('./config/table_check.json', 'r') as f:
@@ -338,6 +393,46 @@ def self_log_monitor_task(log_file):
     else:
         logger.error("error:self check failed")
     
+ 
+'''
+通过对服务器的ssh连接，目的是验证密码是否被客户更改掉，或者机器是否连通
+'''
+def check_ssh_connect_task():
+    
+    error_list = []
+    linuxInfo = ct.get_server_config('./config/check_root_passwd_config.txt')
+    for info in linuxInfo:
+        hostip = info[0]
+        port = int(info[1])
+        username = info[2]
+        password = info[3]
+        os_flag = info[4]
+        if os_flag == 'l':
+            sshClient = ct.sshConnect(hostip, port, username, password)
+            if sshClient == 999:
+                msg = "Failed:服务器[%s],连接失败，请检查密码是否正确" % hostip
+                logger.error(msg)
+                #ct.send_sms_control("NoLimit", msg)
+                error_list.append(hostip + ":::" + username + ":::" + password)
+            else:
+                logger.info("Ok: 服务器[%s]连接正常" % hostip)
+        else:
+            os_info = ct.get_remote_windows_os_info(username, password, hostip)
+            if os_info == 'Null':
+                msg = "Failed:服务器[%s],连接失败，请检查密码是否正确" % hostip
+                logger.error(msg)
+                #ct.send_sms_control("NoLimit", msg)
+                error_list.append(hostip + ":::" + username + ":::" + password)
+            else:
+                logger.info("Ok: 服务器[%s]连接正常,操作系统是[%s]" % (hostip,os_info))            
+        
+    if len(error_list) != 0:
+        temstr = ';'.join(error_list)
+        msg = "Failed:服务器连接失败列表：[%s]，请检查密码是否正确" % temstr
+        logger.error(msg)
+        ct.send_sms_control("NoLimit", msg)
+    else:
+        logger.info("所有服务器连接正常！")
     
 
 
@@ -367,7 +462,7 @@ def main(argv):
                 print('non_trade_monitor.py -t <task>\n \
                     (default:python non_trade_monitor.py) means auto work by loops. \n \
                     use -t can input the manul single task.\n \
-                    task=["ps_port","mem","fpga","db_init","db_trade","errorLog"].  \n \
+                    task=["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","self_monitor","follow","ssh_connect"].  \n \
                     task="ps" means porcess monitor  \n \
                     task="mem" means memory monitor  \n \
                     task="ping" means ping server monitor  \n \
@@ -376,11 +471,13 @@ def main(argv):
                     task="xwdm" means init VIP_GDH file xwdm check  \n \
                     task="cleanup" means db cleanup check  \n \
                     task="self_monitor" means self check monitor  \n \
+                    task="follow" means follow csv file monitor  \n \
+                    task="ssh_connect" means ssh connect monitor  \n \
                     task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","self_monitor"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","follow","self_monitor","ssh_connect"]:
                 logger.error("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -410,13 +507,20 @@ def main(argv):
         elif manual_task == 'sjdr':
             logger.info("Start to excute the sjdr monitor")
             sjdr_monitor_task()
+        elif manual_task == 'follow':
+            logger.info("Start to excute the follow csv monitor")
+            follow_monitor_task()
         elif manual_task == 'self_monitor':
             logger.info("Start to excute the self monitor")
             self_log_monitor_task(log_file)
+        elif manual_task == 'ssh_connect':
+            logger.info("Start to excute the ssh login monitor")
+            check_ssh_connect_task()
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
 #            fpga_task()
 #            db_init_monitor_task()
+            print("input error")
             sys.exit()
             #自动监控暂时不做20190814，下面代码无效
             while True:

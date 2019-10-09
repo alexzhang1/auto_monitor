@@ -128,7 +128,7 @@ class check_csv_file:
             msg = "error: 没有取到服务器 %s GDH文件 %s，请检查文件路径是否正确！" % (self.hostip, filepath)
             logger.error(msg)
             ct.send_sms_control('xwdm', msg)
-            error_kh_list=[[999,999]]
+            error_kh_list=[['999','999']]
         
         return error_kh_list
 
