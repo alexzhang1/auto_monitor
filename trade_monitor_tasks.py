@@ -320,7 +320,7 @@ def main(argv):
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","self_monitor","smss","sms0","sms100"]:
+            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","tcp_con","self_monitor","smss","sms0","sms100"]:
                 logger.warning("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)

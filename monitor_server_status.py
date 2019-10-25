@@ -93,10 +93,10 @@ class MonitorServer:
     def sshExecCmd(self,command):
 
         stdin, stdout, stderr = self.sshClient.exec_command(command)
-#        if stderr:
-#            stderrstr = stderr.read()
-#            print("err:", stderrstr)
-#            logger.error(u"exec_command error:" + stderrstr.decode('utf-8'))
+        if stderr:
+            stderrstr = stderr.read()
+            #print("err:", stderrstr.decode('utf-8'))
+            logger.warning(u"exec_command error:" + stderrstr.decode('utf-8'))
 #        print ("stdout: ", stdout)
 #        print "type: ", type(stdout)
 #        results=stdout.read()
@@ -940,12 +940,13 @@ class MonitorServer:
         tcp_ports = info[6].split(';')
         hostip = info[0]
         for tcp_port in tcp_ports:
-            command = 'ss -anp | grep ' + tcp_port
+            command = '/sbin/ss -anp | grep ' + tcp_port
+            #command = 'df -h'
             
     #        servername = info[4]
             logger.info("command: " + command)
             sshRes = self.sshExecCmd(command)
-    #        print("sshRes:", sshRes)
+            # print("sshRes:", sshRes)
             if sshRes == []:
                 #self.single_info_verify = True
                 msg = "Server[%s] port [%s] tcp connect count is 0 " % (str(hostip), tcp_port)
@@ -955,7 +956,7 @@ class MonitorServer:
                 total_limit = 500
                 single_user_limit = 100
                 #总连接数大于等于500报警。
-                if total_count > total_limit:
+                if total_count >= total_limit:
                     #self.single_info_verify = False
                     total_count_verify = False
                     msg = "Server[%s] port [%s] tcp connect total count[%d] is out of [%d] "\
@@ -968,21 +969,53 @@ class MonitorServer:
                          % (str(hostip), tcp_port, total_count)
                     logger.info(msg)
                 
+                #检查单个IP的连接数
                 self.single_info_verify = False
                 sshResStr = ''.join(sshRes)
                 sshResList = sshResStr.strip().split('\n')
-                print("sshResList: ", sshResList)
-    #            ps_list = []
+                # print("sshResList: ", sshResList)
+                tcp_con_list = []
+                client_ip_list = []
 
-                for datalist in sshResList:    
+                for datalist in sshResList:
+                    # print("datalist:", datalist)
+                    # print("length and type", len(datalist), type(datalist))
+                    tcp_con_list.append(datalist.strip().split())
+                    #client_ip_list.append(datalist[5].split(':')[0])
+                print("tcp_con_list:", tcp_con_list)
 
-                    msg = "error: " + hostip + " Have core file:" + datalist 
-                    ct.write_log(error_log_file, msg)
-                    logger.warning(msg)
+                for list_item in tcp_con_list:
+                    client_ip_list.append(list_item[5].split(":")[0])
+                print("client_ip_list", client_ip_list)
+                #客户IP列表
+                list_set = set(client_ip_list)
+                for item in list_set:
+                    connect_count = client_ip_list.count(item)
+                    check_result_list = []
+                    #客户连接数超过限制报警
+                    if connect_count >= single_user_limit:
+                        #client_con_check = False
+                        check_result_list.append(0)
+                        msg = "Error:客户连接数超限，Server[%s] port[%s] client_ip[%s] tcp 连接数为：[%d]" \
+                            % (hostip, tcp_port, item, connect_count)
+                        logger.error(msg)
+                        ct.send_sms_control('NoLimit', msg)
+                    else:
+                        #client_con_check = True
+                        check_result_list.append(1)
+                        msg = "Server[%s] port[%s] client_ip[%s] has tcp connect count [%d]" \
+                            % (hostip, tcp_port, item, connect_count)
+                        logger.info(msg)
+                    client_con_verify = (sum(check_result_list)==len(check_result_list))
+
+                self.single_info_verify = total_count_verify and client_con_verify
+                    # msg = "error: " + hostip + " Have core file:" + datalist 
+                    # ct.write_log(error_log_file, msg)
+                    # logger.warning(msg)
                 
-                sms_msg = "error: " + hostip + " 有core文件，请检查服务器文件"
-                logger.error(sms_msg)
-                ct.send_sms_control("core", sms_msg)
+                # sms_msg = "error: " + hostip + " 有core文件，请检查服务器文件"
+                # logger.error(sms_msg)
+                # ct.send_sms_control("core", sms_msg)
 
-            msg = "core file Check Result: " + str(self.single_info_verify)
+            msg = "tcp connect Check Result: " + str(self.single_info_verify)
             logger.info(msg)
