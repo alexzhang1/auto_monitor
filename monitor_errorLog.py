@@ -121,7 +121,7 @@ def errorLog_check(fileNlist, grep_lists):
         newfilecount = len(open(newfile, 'r').readlines())
         logger.info("newfilecount:%d", newfilecount)
         if newfilecount > lastfilecount :
-            logger.error("Have New Error log, please check it ")  
+            logger.warning("Have New Error log, please check it ")  
             check_flag = False
         else:
             logger.info("Server log is ok ")
@@ -131,10 +131,10 @@ def errorLog_check(fileNlist, grep_lists):
             logger.info("Server log is ok ")
             check_flag = True
         else:
-            logger.error("Have Error log, please check it ")
+            logger.warning("Have Error log, please check it ")
             check_flag = False
     else:
-        logger.error("Can not get the result file list, please check it ")
+        logger.warning("Can not get the result file list, please check it ")
         check_flag = False
     
     return check_flag

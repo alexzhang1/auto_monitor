@@ -62,7 +62,7 @@ def port_process_task():
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     logger.info("************************The Monitor Result: ************************")
     if check_result:
@@ -186,6 +186,13 @@ def traderapi_QMD_monitor_task():
         logger.error("mdapi monitor 异常：" + msg)
 
 
+#tcp连接数监控
+def tcp_connect_monitor_task():
+
+    linuxInfo = ct.get_server_config('./config/tcp_connect_config.txt')
+    ct.common_monitor_task("single_common_monitor", "tcp_connect_info", linuxInfo)
+
+
 
 
 
@@ -298,6 +305,7 @@ def main(argv):
                     task="errorLog" means file error log monitor  \n \
                     task="mdapi_qry" means mdapi qry market data monitor  \n \
                     task="traderapi_qmd" means mdapi qry market data monitor  \n \
+                    task="tcp_con" means tcp connect count monitor  \n \
                     task="self_monitor" means self check monitor  \n \
                     task="smss" means check the sms send status  \n \
                     task="sms0" means set sms total_count=0  \n \
@@ -313,7 +321,7 @@ def main(argv):
             elif opt in ("-t", "--task"):
                 manual_task = arg
             if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","self_monitor","smss","sms0","sms100"]:
-                logger.error("[task] input is wrong, please try again!")
+                logger.warning("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
     #    if inc == 0:
@@ -336,6 +344,9 @@ def main(argv):
         elif manual_task == 'mdapi_qry':
             logger.info("Start to excute the mdapi qry_market_data monitor")
             mdapi_monitor_qry_task()
+        elif manual_task == 'tcp_con':
+            logger.info("Start to excute the tcp connect count monitor")
+            tcp_connect_monitor_task()
         elif manual_task == 'traderapi_qmd':
             logger.info("Start to excute the traderapi qry_market_data monitor")
             traderapi_QMD_monitor_task()

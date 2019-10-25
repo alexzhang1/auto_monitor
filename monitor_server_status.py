@@ -360,7 +360,7 @@ class MonitorServer:
 #            print("err:", err.decode('gbk'))
 #            if err: sys.exit(err.decode('gbk').strip('\n'))
             if err:
-                logger.error("ping error: %s" % str(err))
+                logger.warning("ping error: %s" % str(err))
                 pres = []
             else:
                 pres = list(res.decode('gbk').split('\n'))
@@ -384,7 +384,7 @@ class MonitorServer:
 #            print("err:", err.decode('gbk'))
 #            if err: sys.exit(err.decode('gbk').strip('\n'))
             if err:
-                logger.error("ping error: %s" % str(err))
+                logger.warning("ping error: %s" % str(err))
                 pres = []
             else:
                 pres = list(res.decode('gbk').split('\n'))
@@ -668,7 +668,7 @@ class MonitorServer:
                 ct.write_log(error_log_file, psstr)
                 msg = "error:" + hostip + " ::The process is " + psstr + ":: Time: " + str(datalist[13]) + " is still working!"
                 ct.write_log(error_log_file, msg)
-                logger.error(msg)
+                logger.warning(msg)
                 ps_list.append(psstr)
             ps_cmd =';'.join(ps_list)
             sms_msg = "error:" + hostip + " ::Processes : " + ps_cmd + " is still working!"
@@ -737,7 +737,7 @@ class MonitorServer:
             msg = "error: The sshResturn is None, please check it"
 #            print msg
             ct.write_log(error_log_file, msg)
-            logger.error(msg)
+            logger.warning(msg)
         else:
             sshResStr = ''.join(sshRes)
 #            print "sshResStr: ", sshResStr
@@ -922,11 +922,67 @@ class MonitorServer:
 
                 msg = "error: " + hostip + " Have core file:" + datalist 
                 ct.write_log(error_log_file, msg)
-                logger.error(msg)
+                logger.warning(msg)
             
             sms_msg = "error: " + hostip + " 有core文件，请检查服务器文件"
+            logger.error(sms_msg)
             ct.send_sms_control("core", sms_msg)
 
         msg = "core file Check Result: " + str(self.single_info_verify)
         logger.info(msg)
 
+
+
+    """ 
+    tcp连接监控
+    """
+    def tcp_connect_info(self,info):
+        tcp_ports = info[6].split(';')
+        hostip = info[0]
+        for tcp_port in tcp_ports:
+            command = 'ss -anp | grep ' + tcp_port
+            
+    #        servername = info[4]
+            logger.info("command: " + command)
+            sshRes = self.sshExecCmd(command)
+    #        print("sshRes:", sshRes)
+            if sshRes == []:
+                #self.single_info_verify = True
+                msg = "Server[%s] port [%s] tcp connect count is 0 " % (str(hostip), tcp_port)
+                logger.info(msg)
+            else:
+                total_count = len(sshRes)
+                total_limit = 500
+                single_user_limit = 100
+                #总连接数大于等于500报警。
+                if total_count > total_limit:
+                    #self.single_info_verify = False
+                    total_count_verify = False
+                    msg = "Server[%s] port [%s] tcp connect total count[%d] is out of [%d] "\
+                         % (str(hostip), tcp_port, total_count, total_limit)
+                    logger.info(msg)
+                    ct.send_sms_control('NoLimit', msg)
+                else:
+                    total_count_verify = True
+                    msg = "Server[%s] port [%s] tcp connect total count[%d]."\
+                         % (str(hostip), tcp_port, total_count)
+                    logger.info(msg)
+                
+                self.single_info_verify = False
+                sshResStr = ''.join(sshRes)
+                sshResList = sshResStr.strip().split('\n')
+                print("sshResList: ", sshResList)
+    #            ps_list = []
+
+                for datalist in sshResList:    
+
+                    msg = "error: " + hostip + " Have core file:" + datalist 
+                    ct.write_log(error_log_file, msg)
+                    logger.warning(msg)
+                
+                sms_msg = "error: " + hostip + " 有core文件，请检查服务器文件"
+                logger.error(sms_msg)
+                ct.send_sms_control("core", sms_msg)
+
+            msg = "core file Check Result: " + str(self.single_info_verify)
+            logger.info(msg)

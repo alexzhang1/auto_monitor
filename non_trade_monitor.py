@@ -79,7 +79,7 @@ logger = logging.getLogger()
 
 
 
-#内存监控
+#ping监控
 def ping_monitor_task():
 
     linuxInfo = ct.get_server_config('./config/server_ping_config.txt')
@@ -95,13 +95,13 @@ def ping_monitor_task():
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     if check_result:
         logger.info("All Server is OK")
     else:
         msg = "服务器Ping值异常，请检查详细日志内容！"
-        logger.error(msg)
+        logger.warning(msg)
 #        ct.send_sms_control("ping", msg)
         sysstr = platform.system()
         if sysstr == "Windows":
@@ -125,13 +125,13 @@ def mem_monitor_task():
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     if check_result:
         logger.info("All Server is OK")
     else:
         msg = "内存监控报警，请检查详细日志内容！"
-        logger.error(msg)
+        logger.warning(msg)
 #        ct.send_sms_control("mem", msg)
         sysstr = platform.system()
         if sysstr == "Windows":
@@ -155,13 +155,13 @@ def ps_monitor_task():
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     if check_result:
         logger.info("All Server is OK")
     else:
         msg = "进程监控报警，请检查详细日志内容！"
-        logger.error(msg)
+        logger.warning(msg)
 #        ct.send_sms_control("ps_port", msg)
         sysstr = platform.system()
         if sysstr == "Windows":
@@ -184,13 +184,13 @@ def disk_monitor_task():
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     if check_result:
         logger.info("All Server is OK")
     else:
         msg = "磁盘使用监控报警，请检查详细日志内容！"
-        logger.error(msg)
+        logger.warning(msg)
 #        ct.send_sms_control("disk", msg)
         sysstr = platform.system()
         if sysstr == "Windows":
@@ -209,9 +209,9 @@ def core_file_monitor_task():
 #公用task任务
 def common_monitor_task(task, single_handle, linuxInfo):
     
-    linuxInfo = ct.get_server_config('./config/server_status_config.txt')
+    #linuxInfo = ct.get_server_config('./config/server_status_config.txt')
     try:
-        single_handle = "core_file_info"
+        #single_handle = "core_file_info"
         ms = MonitorServer(linuxInfo, single_handle)
         task_monitor = ms.single_common_monitor
         
@@ -225,13 +225,13 @@ def common_monitor_task(task, single_handle, linuxInfo):
     except Exception as e:
         check_result = False
         msg = str(e)
-        logger.error(msg)
+        logger.warning(msg)
 
     if check_result:
         logger.info("All Server is OK")
     else:
         msg = task + "::" + single_handle + " 任务监控报警，请检查详细日志内容！"
-        logger.error(msg)
+        logger.warning(msg)
 #        ct.send_sms_control("disk", msg)
         sysstr = platform.system()
         if sysstr == "Windows":
@@ -262,9 +262,11 @@ def xwdm_monitor_task():
                     check_flag += 1
                 else:
                     if error_list == [['999','999']]:
-                        logger.error("Error:查询系统 %s席位代码失败，csv文件不存在" % hostip)
+                        msg = "Error:查询系统 %s席位代码失败，csv文件不存在" % hostip
+                        logger.error(msg)
+                        ct.send_sms_control('xwdm', msg)
                     else:
-                        logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
+                        logger.error(u"Error:检查失败，有客户席位代码不在奇点系统配置内")
                         list_str = ';'.join(temp_list)
                         msg = "Error:系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
                         logger.error(msg)
@@ -276,7 +278,7 @@ def xwdm_monitor_task():
         if check_flag != 0 and check_flag == len(linuxInfo):
             logger.info(u"OK:检查客户席位代码成功!")
         else:
-            logger.error(u"Error:检查客户席位代码失败!")
+            logger.warning(u"Error:检查客户席位代码失败!")
 
 
 '''
@@ -307,7 +309,7 @@ def sjdr_monitor_task():
         if check_flag != 0 and check_flag == len(linuxInfo):
             logger.info(u"OK:检查盘后当天的节点委托回传数据成功!")
         else:
-            logger.error(u"Error:检查盘后当天的节点委托回传数据失败!")
+            logger.warning(u"Error:检查盘后当天的节点委托回传数据失败!")
 
 '''
 跟投csv文件检查
@@ -318,8 +320,8 @@ def follow_monitor_task():
         
         check_flag = 0
         for info in linuxInfo: 
+            hostip = info[0]
             try:
-                hostip = info[0]
                 file_checker = rfc.remote_file_check(info)
                 res_file = file_checker.check_follow()
                 if res_file[:5] != 'Error':
@@ -333,12 +335,13 @@ def follow_monitor_task():
                     ct.send_sms_control('NoLimit', msg)
                     
             except Exception:
-                logger.error("Error:跟投费率优惠文件检查失败，出现异常，请查看服务器日志信息！", exc_info=True)
-                ct.send_sms_control('NoLimit', "跟投费率优惠文件失败，出现异常，请查看服务器日志信息！")
+                msg = "Error:系统 %s 跟投费率优惠文件检查失败，出现异常，请查看服务器日志信息！" % hostip
+                logger.error(msg, exc_info=True)
+                ct.send_sms_control('NoLimit', msg)
         if check_flag != 0 and check_flag == len(linuxInfo):
             logger.info(u"OK:跟投费率优惠文件数据成功!")
         else:
-            logger.error(u"Error:跟投费率优惠文件检查数据失败!")
+            logger.warning(u"Error:跟投费率优惠文件检查数据失败!")
 
 '''
 #盘后数据库清库检查
@@ -478,7 +481,7 @@ def main(argv):
             elif opt in ("-t", "--task"):
                 manual_task = arg
             if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","follow","self_monitor","ssh_connect"]:
-                logger.error("[task] input is wrong, please try again!")
+                logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
     #    if inc == 0:
@@ -569,7 +572,7 @@ def main(argv):
                     logger.info("It's not time to excute the non trade monitor")
                 time.sleep(inc)
     except Exception:
-        logger.error('Faild to run trade_monitor!', exc_info=True)
+        logger.error('Faild to run non_trade_monitor!', exc_info=True)
     finally:
         for handler in logger.handlers:
             logger.removeHandler(handler)

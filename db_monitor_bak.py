@@ -78,13 +78,11 @@ def check_table_count(info, cursor, conn):
                 logger.info("Ok: Check DBserver: %s table: %s count: %d" % (serverip, tablename, result_count))
                 check_flag = True
             else:
-                msg = "Failed: Check DBserver: %s table: %s count: %d not equal %d" % (serverip, tablename, result_count, count)
-                logger.error(msg)
-                ct.send_sms_control('db_init', msg)
+                logger.error("Failed: Check DBserver: %s table: %s count: %d not equal %d" % (serverip, tablename, result_count, count))
                 check_flag = False
                 return check_flag
     except Exception:
-        logger.error(('Faild to check [%s] table count!' % serverip), exc_info=True)            
+        logger.error('Faild to check count!', exc_info=True)            
     return check_flag
 
 
@@ -106,16 +104,15 @@ def check_table_increase(info, cursor, conn):
         if os.path.exists(countfile):
             with open(countfile, 'r') as f:
                 countdict = json.load(f)
-            logger.debug("countdict")
-            logger.debug(countdict)
+                logger.debug("countdict")
+                logger.debug(countdict)
         else:
             countdict = {}       
             for dic in cclists:
-                countdict[str(dic['tablename'])] = 0           
+                countdict[str(dic['tablename'])] = 0
+            
             logger.debug("countdict")
             logger.debug(countdict)
-#            print("2222")
-#            print(countdict)
         for ccdict in cclists:            
             tablename = ccdict["tablename"]
             precount = countdict[str(tablename)]
@@ -130,13 +127,11 @@ def check_table_increase(info, cursor, conn):
                 logger.info("Ok: Check DBserver: %s increase table : %s nowcount: %d precount: %d" % (serverip, tablename, nowcount, precount))
                 check_flag = True
             else:
-                msg = "Failed: Check DBserver: %s not increase table: %s nowcount: %d precount %d" % (serverip, tablename, nowcount, precount)
-                logger.error(msg)
-                ct.send_sms_control('db_trade', msg)
+                logger.error("Failed: Check DBserver: %s not increase table: %s nowcount: %d precount %d" % (serverip, tablename, nowcount, precount))
                 check_flag = False
                 return check_flag
     except Exception:
-        logger.warning('Faild to check increase!', exc_info=True)
+        logger.error('Faild to check increase!', exc_info=True)
     finally:
         json_str = json.dumps(countdict, indent=4)
         with open(countfile, 'w') as json_file:
@@ -171,14 +166,12 @@ def check_money_value(info, cursor, conn):
                             logger.debug("Ok: Check DBserver: %s table: %s moneyfields: %s" % (serverip, tablename, fieldsstr))
                             check_flag = True
                         else:
-                            msg = "Failed: Check DBserver: %s table: %s Money Value: %d is minus" % (serverip, tablename, iitem)
-                            logger.error(msg)
+                            logger.error("Failed: Check DBserver: %s table: %s Money Value: %d is minus" % (serverip, tablename, iitem))
                             logger.error(item)
-                            ct.send_sms_control('db_init', msg)
                             check_flag = False
                             return check_flag
     except Exception:
-        logger.warning('Faild to check money!', exc_info=True)            
+        logger.error('Faild to check money!', exc_info=True)            
     return check_flag
 
 
@@ -210,13 +203,11 @@ def check_date_value(info, cursor, conn):
                     logger.debug(item)  
                     if item[0] == ndates :
 #                    if '20190717' == ndates :
-                        logger.info("Ok: Check DBserver: %s table: %s datefields: %s values: %s" % (serverip, tablename, fieldsstr, item[0]))
+                        logger.debug("Ok: Check DBserver: %s table: %s datefields: %s values: %s" % (serverip, tablename, fieldsstr, item[0]))
                         check_flag = True
                     else:
-                        msg = "Failed: Check DBserver: %s table: %s datefields: %s values: %s" % (serverip, tablename, fieldsstr, item[0])
-                        logger.error(msg)
+                        logger.error("Failed: Check DBserver: %s table: %s datefields: %s values: %s" % (serverip, tablename, fieldsstr, item[0]))
                         check_flag = False
-                        ct.send_sms_control('db_init', msg)
                         return check_flag
     except Exception:
         logger.error('Faild to check TradingDay!', exc_info=True)            
@@ -274,11 +265,9 @@ def check_records_value(info, cursor, conn):
                     logger.info("Ok: Check DBserver: %s csvfile: %s is ok" % (serverip, csvfile))
                     check_flag = True
                 else:
-                    msg = "Failed: Check DBserver: %s csvfile: %s is failed" % (serverip, csvfile)
-                    logger.error(msg)
+                    logger.error("Failed: Check DBserver: %s csvfile: %s is failed" % (serverip, csvfile))
                     logger.error("res_list:")
                     logger.error(res_list)
-                    ct.send_sms_control('db_init', msg)
                     check_flag = False
                     return check_flag
     except Exception:
@@ -354,8 +343,7 @@ def check_remote_csv_ZJXX(info, cursor, conn):
     check_flag = False
     #获取csv文件中的ZJZH,KYJE
     zjxxfile_path = csv_remote_dir + '/' + "VIP_ZJXX" + ndates + ".csv"
-    #20190916加入列5，ZZHBZ
-    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $3,$5,$7}\'"
+    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $3,$7}\'"
 #    zjxxfile_path = '/home/trade/temp/debugkhh.csv'
 #    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $1,$2}\'"
     logger.debug("command:" + command)
@@ -383,20 +371,16 @@ def check_remote_csv_ZJXX(info, cursor, conn):
         zjxx_df.set_index('ZJZH', inplace=True)
 #        for index, row in zjxx_df.iterrows():
 #            print index, row['KYJE']
-        logger.info("The csv KYJE:")
-        logger.info(zjxx_df)
-#        #把结尾是'11'的资金账号过滤掉
-#        index_filter = filter(lambda x: x[-2:] != '11', zjxx_df.index)
-#        logger.debug('index_filter:')
-#        logger.debug(index_filter)
-#        zjxx_filter_df = zjxx_df.loc[index_filter]
-        #把ZZHBZ为0的过滤掉
-        zjxx_filter_df = zjxx_df.loc[zjxx_df['ZZHBZ']!='0']
-        logger.info("zjxx_filter_df")
-#        logger.info(zjxx_filter_df)
-        #20190916不用的列ZZHBZ删除掉
-        zjxx_filter_df = zjxx_filter_df.drop(columns='ZZHBZ')
-        logger.info(zjxx_filter_df)
+        logger.debug("The csv KYJE:")
+        logger.debug(zjxx_df)
+        #把结尾是'11'的资金账号过滤掉
+        index_filter = filter(lambda x: x[-2:] != '11', zjxx_df.index)
+        logger.debug('index_filter:')
+        logger.debug(index_filter)
+        zjxx_filter_df = zjxx_df.loc[index_filter]
+        logger.debug("zjxx_filter_df")
+        logger.debug(zjxx_filter_df)
+        #df.loc[df['column_name'] != some_value]
         
         #获取数据库数据       
         sql = "SELECT [AccountID],[UsefulMoney],[FrozenCash],[FrozenCommission] FROM [" + dbname + "].[dbo].[t_TradingAccount]"
@@ -428,9 +412,7 @@ def check_remote_csv_ZJXX(info, cursor, conn):
                 logger.info("UsefulMoney not equal KYJE, the ZJZH is: %s, Difference is: %.2f" % (index, round(row['InOutMoney'], 2)))
                 TransferMoney = round(get_cust_TransferMoney(info, index, cursor, conn), 2)
                 logger.info("ZJZH %s transfer money is: %.2f" % (index, TransferMoney))
-                final_diff = TransferMoney - round(row['InOutMoney'], 2)
-                logger.info("final_diff:")
-                logger.info(final_diff)
+                final_diff = TransferMoney - row['InOutMoney']
                 #因为每笔委托会冻结0.1元，不体现在总冻结里,额外冻结资金设置一个数，小于这个数不报警，认为这个是被委托冻结了。
                 extra_frozen = 10.0
                 #比较资金差额和出入金，一致的话则没有问题。 
@@ -438,17 +420,11 @@ def check_remote_csv_ZJXX(info, cursor, conn):
                     logger.info("The Difference equal to TransferMoney")
                     check_count += 1
                 #因为每笔委托会冻结0.1元，不体现在总冻结里，所以要单独处理。
-                #elif final_diff > 0 and final_diff < extra_frozen:
                 elif final_diff > 0 and final_diff < extra_frozen:
                     logger.info("The Difference extra_frozen %.2f" % final_diff)
                     check_count += 1
                 else:
-                    #msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney,
-                    # Difference is: %.2f" % (index, serverip, round(row['InOutMoney'], 2))
-                    msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney, \
-                        TransferMoney is %.2f,Difference is: %.2f" % (index, serverip, TransferMoney,round(row['InOutMoney'], 2))
-                    logger.error(msg)
-                    ct.send_sms_control('db_init', msg)
+                    logger.error("error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney,Difference is: %.2f" % (index, serverip, round(row['InOutMoney'], 2)))
             check_flag = (check_count == len(def_khje))
         else:
             logger.info("ok:The csv KYJE equal to DB UsefulMoney")
@@ -460,71 +436,9 @@ def check_remote_csv_ZJXX(info, cursor, conn):
     return check_flag
 
 
-'''
-盘后清库检查:
-    select name FROM [download].[dbo].sysobjects where type='U'，除了表dbo.t_transNum
-    查所有表的数据量：
-    SELECT a.name,b.rows FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U' ORDER BY a.name
-    SELECT sum(b.rows) FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'
-'''
-def cleanup_db_monitor(info):
-    
-    try:               
-        server = info["serverip"]
-        user = info["user"]
-        password = info["password"]
-        dbname = info["dbname"] 
-#        servername = info["servername"]           
-        db_info = [server, user, password, dbname]
-        (cursor, conn) = mt.connect_mssql(db_info)
-        
-        if cursor != None:           
-#            check_result = clean_db_check(info, cursor, conn)           
-            serverip = info["serverip"]
-            sql1 = "SELECT SUM(b.rows) FROM " + dbname + ".dbo.sysobjects a INNER JOIN "\
-                 + dbname + ".dbo.sysindexes b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'"
-            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_TransNum"
-#            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_SSEOrder"
-            logger.info("sql1:" + sql1)
-            logger.debug("sql2:" + sql2)
-            (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
-            (res2,des2) = mt.only_fetchall(cursor, conn, sql2) 
-            total_count = int(res1[0][0])
-            transNum_count =  int(res2[0][0])
-#            print(total_count, transNum_count)             
-            if total_count == transNum_count:
-                logger.info("Ok: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
-                     % (serverip, total_count, transNum_count))
-                check_flag = True
-            else:
-                msg = "Failed: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
-                     % (serverip, total_count, transNum_count)
-                logger.error(msg)
-                check_flag = False
-                ct.send_sms_control('NoLimit', msg)
-                return check_flag
-            
-        else:
-            logger.warning('Can not get cursor!')
-            check_flag = False
-            
-        if check_flag:
-            logger.info("OK: database: %s cleanup db check success!", server)
-        else:
-            logger.error("Failed: database: %s cleanup db check failed!", server)
-            ct.send_sms_control("NoLimit", server + "数据库盘后清库检查失败！请查看详细日志信息。")
-               
-    except Exception:
-        logger.error('Faild to cleanup db check!', exc_info=True)
-        check_flag = False
-    finally:
-        conn.close()
-        return check_flag
-
-
 
 '''
-盘前的数据库检查项
+盘前的检查项
 '''
 def before_trade_monitor(info):
     
@@ -554,7 +468,6 @@ def before_trade_monitor(info):
             logger.info("OK: before trade check database: %s success!", server)
         else:
             logger.error("Failed: before trade check database: %s failed!", server)
-            ct.send_sms_control("db_init", server + "数据库盘前检查失败！请查看详细日志信息。")
                
     except Exception:
         logger.error('Faild to check database before trade!', exc_info=True)
@@ -565,7 +478,7 @@ def before_trade_monitor(info):
 
 
 '''
-交易中数据库检查项
+交易中检查项
 '''
 def trading_monitor(info):
     
@@ -589,7 +502,6 @@ def trading_monitor(info):
             logger.info("OK: database: %s trading check success!", server)
         else:
             logger.error("Failed: database: %s trading check failed!", server)
-            ct.send_sms_control("db_trade", server + "数据库盘中检查失败！请查看详细日志信息。")
                
     except Exception:
         logger.error('Faild to check database trading!', exc_info=True)

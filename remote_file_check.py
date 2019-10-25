@@ -204,7 +204,7 @@ class remote_file_check:
             #print("sshRes3:",sshRes3)
             if sshRes3 == []:
                 msg = "Error: 跟投文件[%s]内容为空" % ffilename
-                logger.error(msg)
+                logger.warning(msg)
                 filename = msg
             else:
                 df = pd.DataFrame(sshRes3[1:],columns={sshRes3[0]})
@@ -217,11 +217,11 @@ class remote_file_check:
                         dup_list = list(dup_df[sshRes3[0]])
                         dup_str = ','.join(dup_list)
                         msg = "跟投文件[%s]有重复的证券代码记录[%s]" % (ffilename, dup_str)
-                        logger.error(msg)
+                        logger.warning(msg)
                         filename = "Error: " + msg
                 else:
                     msg = "Error: 跟投文件[%s]内容为空" % ffilename
-                    logger.error(msg)
+                    logger.warning(msg)
                     filename = msg
         elif len(sshRes2)==0:
             #temstr = ",".join(sshRes2)

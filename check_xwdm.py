@@ -150,8 +150,8 @@ def main(argv):
                 logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
                 check_flag += 1
             else:
-                logger.error(u"error:检查失败，有客户席位代码不在奇点系统配置内")
-                logger.info(u"系统 %s 检查节点 %s 失败的客户如下：" % (hostip, xwdm_check_col))
+                logger.warning(u"error:检查失败，有客户席位代码不在奇点系统配置内")
+                logger.error(u"系统 %s 检查节点 %s 失败的客户如下：" % (hostip, xwdm_check_col))
                 logger.info(error_list)
         if check_flag == len(linuxInfo):
             logger.info(u"OK:检查客户席位代码成功!")
