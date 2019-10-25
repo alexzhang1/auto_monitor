@@ -40,6 +40,7 @@ import os
 import monitor_errorLog as mel
 import mdapi_monitor as mdt
 import traderapi_monitor as tdm
+import non_trade_monitor as ntm
 
 
 
@@ -190,9 +191,7 @@ def traderapi_QMD_monitor_task():
 def tcp_connect_monitor_task():
 
     linuxInfo = ct.get_server_config('./config/tcp_connect_config.txt')
-    ct.common_monitor_task("single_common_monitor", "tcp_connect_info", linuxInfo)
-
-
+    ntm.common_monitor_task("single_common_monitor", "tcp_connect_info", linuxInfo)
 
 
 

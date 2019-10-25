@@ -228,7 +228,8 @@ def common_monitor_task(task, single_handle, linuxInfo):
         logger.warning(msg)
 
     if check_result:
-        logger.info("All Server is OK")
+        msg = "OK,监控任务[%s]验证结果成功,All Server is OK！" % single_handle
+        logger.info(msg)
     else:
         msg = task + "::" + single_handle + " 任务监控报警，请检查详细日志内容！"
         logger.warning(msg)
