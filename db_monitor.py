@@ -462,12 +462,23 @@ def check_remote_csv_ZJXX(info, cursor, conn):
 
 '''
 盘后清库检查:
-    select name FROM [download].[dbo].sysobjects where type='U'，除了表dbo.t_transNum
-    查所有表的数据量：
-    SELECT a.name,b.rows FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U' ORDER BY a.name
-    SELECT sum(b.rows) FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'
+    # select name FROM [download].[dbo].sysobjects where type='U'，除了表dbo.t_transNum
+    # 查所有表的数据量：
+    # SELECT a.name,b.rows FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U' ORDER BY a.name
+    # SELECT sum(b.rows) FROM [download].[dbo].[sysobjects] a INNER JOIN [download].[dbo].[sysindexes] b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'
+    20191025变更：
+    ####交易日20：10
+    ###### 检查download库t_SystemStatus表字段SystemStatus是否为‘2’关闭状态
+    ###### 同时检查表t_TransNum中字段fld_sys_stat是否全部为‘2’关闭状态
+    #### 交易日6：30分
+    ###### 检查t_TransNum表中值是否已重置为
+    values('vip',1,0,0,0);
+    values('vip',2,0,0,0);
+    values('vip',3,0,0,0);
+    values('vip',4,0,0,0);
+    values('vip',5,0,0,0);
 '''
-def cleanup_db_monitor(info):
+def after_cleanup_db_monitor(info):
     
     try:               
         server = info["serverip"]
@@ -478,39 +489,74 @@ def cleanup_db_monitor(info):
         db_info = [server, user, password, dbname]
         (cursor, conn) = mt.connect_mssql(db_info)
         
-        if cursor != None:           
-#            check_result = clean_db_check(info, cursor, conn)           
-            serverip = info["serverip"]
-            sql1 = "SELECT SUM(b.rows) FROM " + dbname + ".dbo.sysobjects a INNER JOIN "\
-                 + dbname + ".dbo.sysindexes b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'"
-            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_TransNum"
-#            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_SSEOrder"
-            logger.info("sql1:" + sql1)
-            logger.debug("sql2:" + sql2)
-            (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
-            (res2,des2) = mt.only_fetchall(cursor, conn, sql2) 
-            total_count = int(res1[0][0])
-            transNum_count =  int(res2[0][0])
-#            print(total_count, transNum_count)             
-            if total_count == transNum_count:
-                logger.info("Ok: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
-                     % (serverip, total_count, transNum_count))
-                check_flag = True
-            else:
-                msg = "Failed: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
-                     % (serverip, total_count, transNum_count)
-                logger.error(msg)
-                check_flag = False
-                ct.send_sms_control('NoLimit', msg)
-                return check_flag
+        if cursor != None:    
+            #判断是否是新的检查清库方式
+            if True:
+                sql1 = "SELECT SystemStatus FROM " + dbname + ".dbo.t_SystemStatus "
+                # '31900001038301':2, 39800001114201:1
+                test1 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '39800001114201'"
+                sql2 = "SELECT fld_sys_stat FROM " + dbname + ".dbo.t_TransNum "
+                test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
+                logger.info("sql1:" + sql1)
+                logger.info("sql2:" + sql2)
+                (res1,des1) = mt.only_fetchall(cursor, conn, test1)
+                SystemStatus = res1[0][0]
+                logger.info("SystemStatus:" + str(SystemStatus))
+                (res2,des2) = mt.only_fetchall(cursor, conn, test2)
+                # (resd,title) = mt.get_db_data(test2,db_info)
+                # print("resd",resd)
+                # print("titel",title)
+                fld_sys_stat_list = []
+                for item in res2:
+                    fld_sys_stat_list.append(item[0])
+                logger.info(fld_sys_stat_list)
+
+                if SystemStatus =='2' and (fld_sys_stat_list.count('2') == len(fld_sys_stat_list)):
+                    msg = "服务器[%s]盘后数据库检查成功" % server
+                    logger.info(msg)
+                    check_flag = True
+                else:
+                    msg = "Error:服务器[%s]盘后数据库检查失败,数据库[%s]表t_SystemStatus字段SystemStatus的值为[%s],"\
+                        "表t_TransNum字段fld_sys_stat字段值为:[%s]" \
+                            % (server, dbname, SystemStatus, (';'.join(fld_sys_stat_list)))
+                    logger.error(msg)
+                    ct.send_sms_control("NoLimit", msg)
+                    check_flag = False
+
+            #老的检查后续要删掉
+            else:       
+    #            check_result = clean_db_check(info, cursor, conn)           
+                #serverip = info["serverip"]
+                sql1 = "SELECT SUM(b.rows) FROM " + dbname + ".dbo.sysobjects a INNER JOIN "\
+                    + dbname + ".dbo.sysindexes b ON a.id=b.id WHERE b.indid IN(0,1) AND a.type='U'"
+                sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_TransNum"
+    #            sql2 = "SELECT COUNT(*) FROM " + dbname + ".dbo.t_SSEOrder"
+                logger.info("sql1:" + sql1)
+                logger.info("sql2:" + sql2)
+                (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
+                (res2,des2) = mt.only_fetchall(cursor, conn, sql2) 
+                total_count = int(res1[0][0])
+                transNum_count =  int(res2[0][0])
+    #            print(total_count, transNum_count)             
+                if total_count == transNum_count:
+                    logger.info("Ok: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
+                        % (server, total_count, transNum_count))
+                    check_flag = True
+                else:
+                    msg = "Failed: Check DBserver: %s all table total count: %d , t_TransNum count: %d"\
+                        % (server, total_count, transNum_count)
+                    logger.error(msg)
+                    check_flag = False
+                    ct.send_sms_control('NoLimit', msg)
+                    #return check_flag
             
         else:
             logger.warning('Can not get cursor!')
             check_flag = False
             
-        if check_flag:
-            logger.info("OK: database: %s cleanup db check success!", server)
-        else:
+        # if check_flag:
+        #     logger.info("OK: database: %s cleanup db check success!", server)
+        # else:
             logger.error("Failed: database: %s cleanup db check failed!", server)
             ct.send_sms_control("NoLimit", server + "数据库盘后清库检查失败！请查看详细日志信息。")
                
@@ -521,6 +567,74 @@ def cleanup_db_monitor(info):
         conn.close()
         return check_flag
 
+'''
+盘前检查清库动作
+    #### 交易日6：30分
+检查t_TransNum表中值是否已重置为
+    values('vip',1,0,0,0);
+    values('vip',2,0,0,0);
+    values('vip',3,0,0,0);
+    values('vip',4,0,0,0);
+    values('vip',5,0,0,0);
+检查upload库中表t_InitSyncStatus是否清空
+'''
+def before_cleanup_db_monitor(info):
+    
+    try:               
+        server = info["serverip"]
+        user = info["user"]
+        password = info["password"]
+        dbname = info["dbname"]
+        upload_dbname = info["upload_dbname"] 
+#        servername = info["servername"]           
+        db_info = [server, user, password, dbname]
+        (cursor, conn) = mt.connect_mssql(db_info)
+        
+        if cursor != None:    
+            #检查upload库中表t_InitSyncStatus是否清空
+            sql1 = "SELECT count(*) FROM " + upload_dbname + ".dbo.t_InitSyncStatus "
+            # '31900001038301':2, 39800001114201:1
+            test1 = "SELECT count(*) FROM download.dbo.t_FundTransferDetail WHERE AccountID = '3980000111111'"
+            (res1,des1) = mt.only_fetchall(cursor, conn, test1)
+            t_InitSyncStatus_count = int(res1[0][0])
+            logger.info("t_InitSyncStatus_count:" + str(t_InitSyncStatus_count))
+            logger.info("sql1:" + sql1)
+            fields = ['fld_system_id','fld_trans_num','fld_sys_stat']
+            field_list = []
+            for field in fields:
+                sql2 = "SELECT " + field + " FROM " + dbname + ".dbo.t_TransNum "
+                test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
+                logger.info("sql2:" + sql2)
+                (res2,des2) = mt.only_fetchall(cursor, conn, test2)
+                
+                for item in res2:
+                    field_list.append(item[0])
+            logger.info(field_list)
+
+            if t_InitSyncStatus_count == 0 and (field_list.count('0') == len(field_list)):
+                msg = "服务器[%s]盘后数据库检查成功" % server
+                logger.info(msg)
+                check_flag = True
+            else:
+                msg = "Error:服务器[%s]盘后数据库检查失败,数据库[%s]表t_InitSyncStatus记录数量为[%d],"\
+                    "数据库[%s]表t_TransNum字段fld_sys_stat字段值为:[%s]" \
+                        % (server, upload_dbname, t_InitSyncStatus_count, dbname, (';'.join(field_list)))
+                logger.error(msg)
+                ct.send_sms_control("NoLimit", msg)
+                check_flag = False
+
+        else:
+            logger.warning('Can not get cursor!')
+            check_flag = False
+            logger.error("Failed: database: %s cleanup db check failed!", server)
+            ct.send_sms_control("NoLimit", server + "数据库盘前清库检查失败！请查看详细日志信息。")
+               
+    except Exception:
+        logger.error('Faild to cleanup db check!', exc_info=True)
+        check_flag = False
+    finally:
+        conn.close()
+        return check_flag
 
 
 '''

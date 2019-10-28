@@ -85,8 +85,8 @@ def fetchall_sql(db_info, sql):
 '''
 Get the table data and titlename 
 '''
-def get_db_data(sql):
-    (cursor, conn) = connect_mssql()
+def get_db_data(sql, db_info):
+    (cursor, conn) = connect_mssql(db_info)
     try:
 #        print(sql)
         cursor.execute(sql)
@@ -98,5 +98,5 @@ def get_db_data(sql):
         conn.rollback()
         print('...have problem, already rollback!')
         print(e)
-    conn.close()
-    return res,des
+    #conn.close()
+    return res,title

@@ -347,7 +347,7 @@ def follow_monitor_task():
 '''
 #盘后数据库清库检查
 '''
-def cleanup_db_monitor_task():
+def after_cleanup_db_monitor_task():
     
     with open('./config/table_check.json', 'r') as f:
         Jsonlist = json.load(f)
@@ -357,7 +357,7 @@ def cleanup_db_monitor_task():
         threads=[]
         for (i,info) in zip(thrlist, Jsonlist):
             #print("alltask.__name__:", alltask.__name__)
-            t = dbm.MyThread(dbm.cleanup_db_monitor,(info,),dbm.cleanup_db_monitor.__name__ + str(i))
+            t = dbm.MyThread(dbm.after_cleanup_db_monitor,(info,),dbm.after_cleanup_db_monitor.__name__ + str(i))
             threads.append(t)
             
         for i in thrlist:
@@ -375,6 +375,37 @@ def cleanup_db_monitor_task():
                 logger.info("OK:数据库盘后清库检查正常")
 #                ct.send_sms_control("NoLimit", "OK:数据库盘后清库检查失败检查正常")
 
+
+'''
+#盘前数据库清库检查
+'''
+def before_cleanup_db_monitor_task():
+    
+    with open('./config/table_check.json', 'r') as f:
+        Jsonlist = json.load(f)
+        logger.debug(Jsonlist)
+    
+        thrlist = range(len(Jsonlist))
+        threads=[]
+        for (i,info) in zip(thrlist, Jsonlist):
+            #print("alltask.__name__:", alltask.__name__)
+            t = dbm.MyThread(dbm.before_cleanup_db_monitor,(info,),dbm.before_cleanup_db_monitor.__name__ + str(i))
+            threads.append(t)
+            
+        for i in thrlist:
+            threads[i].start()
+        for i in thrlist:       
+            threads[i].join()
+            threadResult = threads[i].get_result()
+            sysstr = platform.system()
+            if (not threadResult) :
+                logger.error("error:数据库盘后清库检查失败，请检查详细错误信息")
+                ct.send_sms_control("NoLimit", "error:数据库盘后清库检查失败，请检查详细错误信息")
+                if (sysstr == "Windows"):
+                    ct.readTexts("Database cleanup Worning") 
+            else:
+                logger.info("OK:数据库盘后清库检查正常")
+#                ct.send_sms_control("NoLimit", "OK:数据库盘后清库检查失败检查正常")
 
 
 #自己日志监控
@@ -473,7 +504,8 @@ def main(argv):
                     task="disk" means disk monitor  \n \
                     task="core" means core file monitor  \n \
                     task="xwdm" means init VIP_GDH file xwdm check  \n \
-                    task="cleanup" means db cleanup check  \n \
+                    task="bef_cleanup" means db cleanup check  \n \
+                    task="aft_cleanup" means db cleanup check  \n \
                     task="self_monitor" means self check monitor  \n \
                     task="follow" means follow csv file monitor  \n \
                     task="ssh_connect" means ssh connect monitor  \n \
@@ -481,7 +513,7 @@ def main(argv):
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","follow","self_monitor","ssh_connect"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","self_monitor","ssh_connect"]:
                 logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -505,9 +537,12 @@ def main(argv):
         elif manual_task == 'xwdm':
             logger.info("Start to excute the xwdm check")
             xwdm_monitor_task()
-        elif manual_task == 'cleanup':
+        elif manual_task == 'aft_cleanup':
             logger.info("Start to excute the cleanup db monitor")
-            cleanup_db_monitor_task()
+            after_cleanup_db_monitor_task()
+        elif manual_task == 'bef_cleanup':
+            logger.info("Start to excute the cleanup db monitor")
+            before_cleanup_db_monitor_task()
         elif manual_task == 'sjdr':
             logger.info("Start to excute the sjdr monitor")
             sjdr_monitor_task()
