@@ -494,15 +494,15 @@ def after_cleanup_db_monitor(info):
             if True:
                 sql1 = "SELECT SystemStatus FROM " + dbname + ".dbo.t_SystemStatus "
                 # '31900001038301':2, 39800001114201:1
-                test1 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '39800001114201'"
+                #test1 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '39800001114201'"
                 sql2 = "SELECT fld_sys_stat FROM " + dbname + ".dbo.t_TransNum "
-                test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
+                #test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
                 logger.info("sql1:" + sql1)
                 logger.info("sql2:" + sql2)
-                (res1,des1) = mt.only_fetchall(cursor, conn, test1)
+                (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
                 SystemStatus = res1[0][0]
                 logger.info("SystemStatus:" + str(SystemStatus))
-                (res2,des2) = mt.only_fetchall(cursor, conn, test2)
+                (res2,des2) = mt.only_fetchall(cursor, conn, sql2)
                 # (resd,title) = mt.get_db_data(test2,db_info)
                 # print("resd",resd)
                 # print("titel",title)
@@ -569,7 +569,7 @@ def after_cleanup_db_monitor(info):
 
 '''
 盘前检查清库动作
-    #### 交易日6：30分
+    #### 交易日6：35分
 检查t_TransNum表中值是否已重置为
     values('vip',1,0,0,0);
     values('vip',2,0,0,0);
@@ -594,8 +594,8 @@ def before_cleanup_db_monitor(info):
             #检查upload库中表t_InitSyncStatus是否清空
             sql1 = "SELECT count(*) FROM " + upload_dbname + ".dbo.t_InitSyncStatus "
             # '31900001038301':2, 39800001114201:1
-            test1 = "SELECT count(*) FROM download.dbo.t_FundTransferDetail WHERE AccountID = '3980000111111'"
-            (res1,des1) = mt.only_fetchall(cursor, conn, test1)
+            #test1 = "SELECT count(*) FROM download.dbo.t_FundTransferDetail WHERE AccountID = '3980000111111'"
+            (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
             t_InitSyncStatus_count = int(res1[0][0])
             logger.info("t_InitSyncStatus_count:" + str(t_InitSyncStatus_count))
             logger.info("sql1:" + sql1)
@@ -603,12 +603,12 @@ def before_cleanup_db_monitor(info):
             field_list = []
             for field in fields:
                 sql2 = "SELECT " + field + " FROM " + dbname + ".dbo.t_TransNum "
-                test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
+                #test2 = "SELECT TransferStatus FROM download.dbo.t_FundTransferDetail WHERE AccountID = '36200001166101'"
                 logger.info("sql2:" + sql2)
-                (res2,des2) = mt.only_fetchall(cursor, conn, test2)
+                (res2,des2) = mt.only_fetchall(cursor, conn, sql2)
                 
                 for item in res2:
-                    field_list.append(item[0])
+                    field_list.append(str(item[0]))
             logger.info(field_list)
 
             if t_InitSyncStatus_count == 0 and (field_list.count('0') == len(field_list)):
