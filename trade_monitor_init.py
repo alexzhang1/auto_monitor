@@ -102,29 +102,8 @@ def db_init_monitor_task():
     
  
 #启动程序时清理一下表trade_monitor_pare.json
-def init_data():
-    
-    local_date = dt.datetime.today().strftime('%Y-%m-%d')
-    countfile = './config/trade_monitor_para.json'
-    with open(countfile, 'r') as f:
-        Json_dic = json.load(f)
-    if Json_dic["sms_no_control"]["init_day"] != local_date:
-        Json_dic["sms_no_control"]["ps_port"] = 0
-        Json_dic["sms_no_control"]["mem"] = 0
-        Json_dic["sms_no_control"]["fpga"] = 0
-        Json_dic["sms_no_control"]["db_init"] = 0
-        Json_dic["sms_no_control"]["db_trade"] = 0
-        Json_dic["sms_no_control"]["errorLog"] = 0
-        Json_dic["sms_no_control"]["total_used_count"] = 0
-        Json_dic["sms_no_control"]["init_day"] = local_date
-        #单项短信发送次数记录清零
-        json_str = json.dumps(Json_dic, indent=4)
-        with open(countfile, 'w') as json_file:
-            json_file.write(json_str)
-        logger.debug("Init para data success")
-    else:
-        #每天只做一次初始化
-        logger.debug("Not to init data")
+# 
+
     
 
 
@@ -146,7 +125,6 @@ def send_sms_control(sms_type, msg, phone='13162583883,13681919346'):
     single_limit = Json_dic["sms_no_control"]["single_limit"]
     total_count = Json_dic["sms_no_control"]["total_count"]
     
-#    sms_type = "NoLimi1t"
     if sms_type == "NoLimit":
         single_times = 0
     else:

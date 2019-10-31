@@ -127,10 +127,10 @@ def check_table_increase(info, cursor, conn):
             logger.debug("nowcount: %d", nowcount)
             countdict[str(tablename)] = nowcount
             if nowcount > precount:
-                logger.info("Ok: Check DBserver: %s increase table : %s nowcount: %d precount: %d" % (serverip, tablename, nowcount, precount))
+                logger.info("Ok: Check DBserver: %s dbname %s increase table : %s nowcount: %d precount: %d" % (serverip, dbname, tablename, nowcount, precount))
                 check_flag = True
             else:
-                msg = "Failed: Check DBserver: %s not increase table: %s nowcount: %d precount %d" % (serverip, tablename, nowcount, precount)
+                msg = "Failed: Check DBserver: %s dbname %s not increase table: %s nowcount: %d precount %d" % (serverip, dbname, tablename, nowcount, precount)
                 logger.error(msg)
                 ct.send_sms_control('db_trade', msg)
                 check_flag = False
@@ -237,7 +237,10 @@ def check_records_value(info, cursor, conn):
             csvfile = ccdict["filename"]
             condition = ccdict["condition"]
             logger.debug("fieldsstr:" + fieldsstr)
-            
+            #20191031空的表不检查
+            if csvfile == 'dbo.t_User_null_check.csv':
+                check_flag = True
+                return check_flag
             csvlist = [] #20190617-初始化应放在外面
             with open('./config/' + csvfile,'r') as csvFile:
                 reader = csv.reader(csvFile)
@@ -703,11 +706,12 @@ def trading_monitor(info):
             logger.info("OK: database: %s trading check success!", server)
         else:
             logger.error("Failed: database: %s trading check failed!", server)
-            ct.send_sms_control("db_trade", server + "数据库盘中检查失败！请查看详细日志信息。")
+            #ct.send_sms_control("db_trade", server + "数据库盘中检查失败！请查看详细日志信息。")
                
     except Exception:
         logger.error('Faild to check database trading!', exc_info=True)
         check_result = False
+        ct.send_sms_control("db_trade", "数据库盘中检查失败！请查看详细日志信息。")
     finally:
         conn.close()
         return check_result

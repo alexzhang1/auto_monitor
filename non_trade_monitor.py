@@ -43,7 +43,7 @@ Created on 2019-07-26 10:01:58
 
 ##### 11.盘后清库检查
 
-###### 检查数据库除了表dbo.t_transNum以外的数据库数据是否被清除。
+###### 检查数据库除了表dbo.t_transNum以外的数据库数据是否被清除，分为盘前和盘后的2部分检查。
 
 ##### 12.ssh连接检查
 
@@ -55,6 +55,8 @@ Created on 2019-07-26 10:01:58
 ###### 远程获取文件home/assess/csvfiles/FollowSecurity_{ndata+1}.csv，
 ###### 并上传到指定目录/home/trade/run/timaker_hx/follow
 ###### 校验文件内容是否有重复的记录。
+##### 14.ssh远程执行命令（自动定时对时任务）
+###### 通过对服务器的ssh连接，执行对时任务。
 """
 
 
@@ -368,7 +370,7 @@ def after_cleanup_db_monitor_task():
             sysstr = platform.system()
             if (not threadResult) :
                 logger.error("error:数据库盘后清库检查失败，请检查详细错误信息")
-                ct.send_sms_control("NoLimit", "error:数据库盘后清库检查失败，请检查详细错误信息")
+                #ct.send_sms_control("NoLimit", "error:数据库盘后清库检查失败，请检查详细错误信息")
                 if (sysstr == "Windows"):
                     ct.readTexts("Database cleanup Worning") 
             else:
@@ -470,6 +472,52 @@ def check_ssh_connect_task():
         logger.info("所有服务器连接正常！")
     
 
+'''
+远程对服务器进行对时操作
+'''
+def ssh_remote_command_task():
+    
+    error_list = []
+    linuxInfo = ct.get_server_config('./config/ssh_remote_command_config.txt')
+    for info in linuxInfo:
+        hostip = info[0]
+        port = int(info[1])
+        username = info[2]
+        password = info[3]
+        command = info[5]
+
+        sshClient = ct.sshConnect(hostip, port, username, password)
+        if sshClient == 999:
+            msg = "Failed:服务器[%s],连接失败，请检查密码是否正确" % hostip
+            logger.error(msg)
+            #ct.send_sms_control("NoLimit", msg)
+            error_list.append(msg)
+        else:
+            logger.info("Ok: 服务器[%s]连接正常" % hostip)
+            logger.info(hostip + "::" + command)
+            #sshRes = ct.sshExecCmd(sshClient, command)
+            stdin, stdout, stderr = sshClient.exec_command(command)
+            stdoutstr = stdout.read().decode('utf-8')
+            ssherr = stderr.read().decode('utf-8')
+            if ssherr:
+                msg = "服务器[%s]ssh执行命令返回错误：[%s]" % (hostip, ssherr)
+                logger.warning(msg)
+                error_list.append(msg)
+            sshRes = []
+            sshRes = stdoutstr.strip().split('\n')
+            if sshRes == ['']:
+                sshRes = []
+            logger.info("sshRes:")
+            logger.info(sshRes)
+                
+    if len(error_list) != 0:
+        temstr = ';'.join(error_list)
+        msg = "Failed:服务器ssh执行命令失败列表：[%s]" % temstr
+        logger.error(msg)
+        ct.send_sms_control("NoLimit", msg)
+    else:
+        logger.info("所有服务器ssh执行命令正常！")
+
 
 
 def main(argv):
@@ -509,11 +557,12 @@ def main(argv):
                     task="self_monitor" means self check monitor  \n \
                     task="follow" means follow csv file monitor  \n \
                     task="ssh_connect" means ssh connect monitor  \n \
+                    task="ssh_excute" means ssh connect monitor  \n \
                     task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","self_monitor","ssh_connect"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","self_monitor","ssh_connect","ssh_excute"]:
                 logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -555,6 +604,9 @@ def main(argv):
         elif manual_task == 'ssh_connect':
             logger.info("Start to excute the ssh login monitor")
             check_ssh_connect_task()
+        elif manual_task == 'ssh_excute':
+            logger.info("Start to excute the ssh remote command")
+            ssh_remote_command_task()
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
 #            fpga_task()
