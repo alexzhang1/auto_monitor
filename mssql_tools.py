@@ -44,12 +44,17 @@ def only_fetchall(cursor, conn, sql):
         res = cursor.fetchall()
         des = cursor.description
         logger.debug('...execute sql successfull!')
-#        print('...execute successfull!')
-    except Exception:
+#     except Exception:
+#         conn.rollback()
+#         logger.error('...have problem, already rollback!', exc_info=True)
+# #        print(e)
+#         return None
+    except Exception as e:
         conn.rollback()
         logger.error('...have problem, already rollback!', exc_info=True)
-#        print(e)
-        return None
+        print("error_com:", type(e),e)
+        msg = str(e)
+        return None,msg
     return res,des
 
 

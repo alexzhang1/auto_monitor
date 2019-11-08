@@ -17,6 +17,7 @@ import datetime as dt
 import time
 import json
 import os
+import subprocess
 import logging
 import csv
 import threading
@@ -580,6 +581,8 @@ def after_cleanup_db_monitor(info):
     values('vip',4,0,0,0);
     values('vip',5,0,0,0);
 检查upload库中表t_InitSyncStatus是否清空
+20191108增加：
+检查upload.dbo.t_EQCommand是否为空
 '''
 def before_cleanup_db_monitor(info):
     
@@ -598,10 +601,17 @@ def before_cleanup_db_monitor(info):
             sql1 = "SELECT count(*) FROM " + upload_dbname + ".dbo.t_InitSyncStatus "
             # '31900001038301':2, 39800001114201:1
             #test1 = "SELECT count(*) FROM download.dbo.t_FundTransferDetail WHERE AccountID = '3980000111111'"
+            logger.info("sql1:" + sql1)
             (res1,des1) = mt.only_fetchall(cursor, conn, sql1)
             t_InitSyncStatus_count = int(res1[0][0])
             logger.info("t_InitSyncStatus_count:" + str(t_InitSyncStatus_count))
-            logger.info("sql1:" + sql1)
+             #检查upload库中表t_EQCommand是否清空
+            sql3 = "SELECT count(*) FROM " + upload_dbname + ".dbo.t_EQCommand "
+            logger.info("sql3:" + sql3)
+            (res3,des3) = mt.only_fetchall(cursor, conn, sql3)
+            t_EQCommand_count = int(res3[0][0])
+            logger.info("t_EQCommand_count:" + str(t_EQCommand_count))
+
             fields = ['fld_system_id','fld_trans_num','fld_sys_stat']
             field_list = []
             for field in fields:
@@ -614,14 +624,14 @@ def before_cleanup_db_monitor(info):
                     field_list.append(str(item[0]))
             logger.info(field_list)
 
-            if t_InitSyncStatus_count == 0 and (field_list.count('0') == len(field_list)):
+            if t_InitSyncStatus_count == 0 and t_EQCommand_count == 0 and (field_list.count('0') == len(field_list)):
                 msg = "服务器[%s]盘后数据库检查成功" % server
                 logger.info(msg)
                 check_flag = True
             else:
-                msg = "Error:服务器[%s]盘后数据库检查失败,数据库[%s]表t_InitSyncStatus记录数量为[%d],"\
+                msg = "Error:服务器[%s]盘后数据库检查失败,数据库[%s]表t_InitSyncStatus记录数量为[%d],表t_EQCommand_count记录数量为[%d],"\
                     "数据库[%s]表t_TransNum字段fld_sys_stat字段值为:[%s]" \
-                        % (server, upload_dbname, t_InitSyncStatus_count, dbname, (';'.join(field_list)))
+                        % (server, upload_dbname, t_InitSyncStatus_count, t_EQCommand_count, dbname, (';'.join(field_list)))
                 logger.error(msg)
                 ct.send_sms_control("NoLimit", msg)
                 check_flag = False
@@ -634,6 +644,110 @@ def before_cleanup_db_monitor(info):
                
     except Exception:
         logger.error('Faild to cleanup db check!', exc_info=True)
+        check_flag = False
+    finally:
+        conn.close()
+        return check_flag
+
+'''
+盘后数据库备份
+'''
+def backup_db_monitor(info):
+    
+    try:               
+        server = info["serverip"]
+        user = info["user"]
+        password = info["password"]
+        admin_passwd = info["admin_passwd"]
+        dbname = info["dbname"]
+        upload_dbname = info["upload_dbname"] 
+        db_back_local = info["db_back_local"]
+        db_back_remote = info["db_back_remote"]
+#        servername = info["servername"]           
+        db_info = [server, user, password, dbname]
+        (cursor, conn) = mt.connect_mssql(db_info)
+        
+        if cursor != None:    
+            #执行备份
+            check_list = []
+            for db_item in [dbname, upload_dbname]:
+                testdb = "nodb"
+                # sql1 = '''declare @path nvarchar(256)
+                #         set @path = 'C:\Backup_DataBase\{0}_' + replace(replace(convert(nvarchar(32),getdate(),126),'.','_'),':','_') + '.bak'
+                #         backup database [{0}] to disk = @path '''.format(db_item)
+                sql1 = '''declare @path nvarchar(256)
+                        set @path = 'C:\Backup_DataBase\{0}.bak'
+                        backup database [{0}] to disk = @path '''.format(db_item)
+                logger.info("sql:" + sql1)
+                conn.autocommit(True)
+                # (res1,des) = mt.only_fetchall(cursor, conn, sql1)
+                try:
+                    cursor.execute(sql1)
+                    #res1 = cursor.fetchall()
+                    res1 = None
+                    errmsg = 'executed statement has no resultset'
+                    logger.info("res1")
+                    logger.info(res1)
+                except Exception as e:
+                        logger.error('sql 执行异常', exc_info=True)
+                        #print("error_com:", type(e),e)
+                        errmsg = str(e)
+                        res1 = None
+                        logger.error("errmsg:" + errmsg)
+                conn.autocommit(False)
+                #远程备份文件
+                if res1 == None and errmsg == 'executed statement has no resultset':
+                    logger.info("OK，服务器[%s]数据库[%s]执行成功。" % (server, db_item))
+                    #等待10s备份文件生成
+                    time.sleep(1)
+                    backup_flag = True
+                    #备份成功的话再复制到linux服务器上
+                    db_back_local_path = "/C:/Backup_DataBase/" + db_item + ".bak" 
+                    db_back_remote_dir = db_back_remote + server
+                    if os.path.exists(db_back_remote_dir):
+                        pass
+                    else:
+                        os.mkdir(db_back_remote_dir)
+
+                    command = './scp_task.sh %s %s %s %s %s' % (server,'administrator',admin_passwd,db_back_local_path,
+                            db_back_remote_dir)
+                    logger.info(command)
+                    try:
+                        res = subprocess.run(command,shell=True,check=True,capture_output=True)
+                        logger.info(str(res.returncode))
+                        logger.info(res.stdout.decode('utf-8'))
+                        #print("error:",res.stderr.decode('utf-8'))
+                        #print(res.stderr == b'')
+                        excp_msg = None
+                        if res.stderr:
+                            logger.error(res.stderr.decode('utf-8'))
+                            msg = "Error,服务器[%s]上传数据库[%s]备份文件失败，错误消息：[%s]" % (server,db_item,res.stderr.decode('utf-8'))
+                            ct.send_sms_control('NoLimit', msg)
+                        else:
+                            check_list.append(1)
+                            msg = "Ok,服务器[%s]上传数据库[%s]备份文件成功" % (server,db_item)
+                            logger.info(msg)
+                    except Exception as e:
+                        msg = "Error,服务器[%s]上传数据库[%s]备份文件失败，错误消息：[%s]" % (server,db_item,str(e))
+                        logger.error(msg)
+                        ct.send_sms_control('NoLimit', msg)
+                        check_list.append(0)
+                else:
+                    msg = "Error:服务器[%s]数据库[%s]执行备份脚本返回错误：[%s]" % (server, db_item, errmsg)
+                    logger.error(msg)
+                    backup_flag = False
+                    check_list.append(0)
+                    ct.send_sms_control('NoLimit',msg)
+            check_flag = (sum(check_list)==len(check_list))
+
+        else:
+            #logger.warning('Can not get cursor!')
+            check_flag = False
+            logger.error("Failed: database: %s backup db check failed,Can not get cursor!", server)
+            ct.send_sms_control("NoLimit", server + "数据库备份失败！Can not get cursor!。")
+               
+    except Exception:
+        logger.error('Faild to backup db check!', exc_info=True)
         check_flag = False
     finally:
         conn.close()
@@ -685,13 +799,14 @@ def before_trade_monitor(info):
 交易中数据库检查项
 '''
 def trading_monitor(info):
-    
+
+    server = info["serverip"]
+    user = info["user"]
+    password = info["password"]
+    dbname = info["dbname"]    
+#        servername = info["servername"]      
     try:               
-        server = info["serverip"]
-        user = info["user"]
-        password = info["password"]
-        dbname = info["dbname"]    
-#        servername = info["servername"]        
+     
         db_info = [server, user, password, dbname]
         (cursor, conn) = mt.connect_mssql(db_info)
         
@@ -701,6 +816,7 @@ def trading_monitor(info):
         else:
             logger.error('Can not get cursor!')
             check_result = False
+            ct.send_sms_control("db_trade", server + "数据库盘中检查失败！Can not get cursor!")
             
         if check_result:
             logger.info("OK: database: %s trading check success!", server)
@@ -711,7 +827,7 @@ def trading_monitor(info):
     except Exception:
         logger.error('Faild to check database trading!', exc_info=True)
         check_result = False
-        ct.send_sms_control("db_trade", "数据库盘中检查失败！请查看详细日志信息。")
+        ct.send_sms_control("db_trade", server + "数据库盘中检查失败！请查看详细日志信息。")
     finally:
         conn.close()
         return check_result

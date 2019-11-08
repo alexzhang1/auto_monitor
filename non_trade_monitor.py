@@ -410,6 +410,45 @@ def before_cleanup_db_monitor_task():
 #                ct.send_sms_control("NoLimit", "OK:数据库盘后清库检查失败检查正常")
 
 
+'''
+#数据库备份及上传到监控服务器
+'''
+def backup_db_monitor_task():
+    
+    with open('./config/table_check.json', 'r') as f:
+        Jsonlist = json.load(f)
+        logger.debug(Jsonlist)
+    
+        thrlist = range(len(Jsonlist))
+        threads=[]
+        for (i,info) in zip(thrlist, Jsonlist):
+            #print("alltask.__name__:", alltask.__name__)
+            t = dbm.MyThread(dbm.backup_db_monitor,(info,),dbm.backup_db_monitor.__name__ + str(i))
+            threads.append(t)
+            
+        for i in thrlist:
+            threads[i].start()
+        check_list = []
+        for i in thrlist:       
+            threads[i].join()
+            threadResult = threads[i].get_result()
+            if (not threadResult) :
+                #logger.error("error:数据库备份失败，请检查详细错误信息")
+                check_list.append(0)
+                #ct.send_sms_control("NoLimit", "error:数据库备份检查失败，请检查详细错误信息")
+            else:
+                check_list.append(1)
+                #logger.info("OK:数据库备份检查正常")
+        #print("check_list：", check_list)
+        check_flag = (sum(check_list)==len(check_list))
+        if (not check_flag) :
+            logger.error("error:有数据库备份失败，请检查详细错误信息")
+            logger.error(check_list)
+            #ct.send_sms_control("NoLimit", "error:数据库备份检查失败，请检查详细错误信息")
+        else:
+            logger.info("OK:所有数据库备份检查正常")
+
+
 #自己日志监控
 def self_log_monitor_task(log_file):
     logger.info("self_log_monitor_check msg")
@@ -558,11 +597,12 @@ def main(argv):
                     task="follow" means follow csv file monitor  \n \
                     task="ssh_connect" means ssh connect monitor  \n \
                     task="ssh_excute" means ssh connect monitor  \n \
+                    task="bkdb" means backup db monitor  \n \
                     task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","self_monitor","ssh_connect","ssh_excute"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","bkdb","self_monitor","ssh_connect","ssh_excute"]:
                 logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -607,6 +647,9 @@ def main(argv):
         elif manual_task == 'ssh_excute':
             logger.info("Start to excute the ssh remote command")
             ssh_remote_command_task()
+        elif manual_task == 'bkdb':
+            logger.info("Start to excute the backup db monitor")
+            backup_db_monitor_task()
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
 #            fpga_task()
