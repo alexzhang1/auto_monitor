@@ -43,19 +43,32 @@ Created on 2019-07-26 10:01:58
 
 ##### 11.盘后清库检查
 
-###### 检查数据库除了表dbo.t_transNum以外的数据库数据是否被清除，分为盘前和盘后的2部分检查。
+###### 检查数据库除了表dbo.t_transNum以外的数据库数据是否被清除。
+##### 12.盘前清库检查
+检查t_TransNum表中值是否已重置为
+    values('vip',1,0,0,0);
+    values('vip',2,0,0,0);
+    values('vip',3,0,0,0);
+    values('vip',4,0,0,0);
+    values('vip',5,0,0,0);
+检查upload库中表t_InitSyncStatus是否清空
+20191108增加：
+检查upload.dbo.t_EQCommand是否为空
+##### 13.盘前数据库备份，并上传到远程备份服务器
 
-##### 12.ssh连接检查
+###### 备份数据库，并将数据库备份文件上传至指定备份服务器。
+
+##### 14.ssh连接检查
 
 ###### 通过对服务器的ssh连接，目的是验证密码是否被客户更改掉，或者机器是否连通。
 
-##### 13.跟投费率优惠文件检查
+##### 15.跟投费率优惠文件检查
 
 ###### 先清除历史文件/home/trade/run/timaker_hx/follow，
 ###### 远程获取文件home/assess/csvfiles/FollowSecurity_{ndata+1}.csv，
 ###### 并上传到指定目录/home/trade/run/timaker_hx/follow
 ###### 校验文件内容是否有重复的记录。
-##### 14.ssh远程执行命令（自动定时对时任务）
+##### 16.ssh远程执行命令（自动定时对时任务）
 ###### 通过对服务器的ssh连接，执行对时任务。
 """
 
@@ -492,6 +505,8 @@ def check_ssh_connect_task():
                 error_list.append(hostip + ":::" + username + ":::" + password)
             else:
                 logger.info("Ok: 服务器[%s]连接正常" % hostip)
+            
+            sshClient.close()
         else:
             os_info = ct.get_remote_windows_os_info(username, password, hostip)
             if os_info == 'Null':
@@ -548,6 +563,8 @@ def ssh_remote_command_task():
                 sshRes = []
             logger.info("sshRes:")
             logger.info(sshRes)
+        
+        sshClient.close()
                 
     if len(error_list) != 0:
         temstr = ';'.join(error_list)

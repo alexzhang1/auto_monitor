@@ -659,10 +659,13 @@ def backup_db_monitor(info):
         user = info["user"]
         password = info["password"]
         admin_passwd = info["admin_passwd"]
+        admin_passwd = "123.com"
         dbname = info["dbname"]
         upload_dbname = info["upload_dbname"] 
         db_back_local = info["db_back_local"]
         db_back_remote = info["db_back_remote"]
+        sshuser = info['sshuser']
+        sshpw = info['sshpw']
 #        servername = info["servername"]           
         db_info = [server, user, password, dbname]
         (cursor, conn) = mt.connect_mssql(db_info)
@@ -677,7 +680,7 @@ def backup_db_monitor(info):
                 #         backup database [{0}] to disk = @path '''.format(db_item)
                 sql1 = '''declare @path nvarchar(256)
                         set @path = 'C:\Backup_DataBase\{0}.bak'
-                        backup database [{0}] to disk = @path '''.format(db_item)
+                        backup database [{0}] to disk = @path with format '''.format(db_item)
                 logger.info("sql:" + sql1)
                 conn.autocommit(True)
                 # (res1,des) = mt.only_fetchall(cursor, conn, sql1)
@@ -699,29 +702,66 @@ def backup_db_monitor(info):
                 if res1 == None and errmsg == 'executed statement has no resultset':
                     logger.info("OK，服务器[%s]数据库[%s]执行成功。" % (server, db_item))
                     #等待10s备份文件生成
-                    time.sleep(1)
-                    backup_flag = True
+                    time.sleep(10)
+                    #backup_flag = True
                     #备份成功的话再复制到linux服务器上
                     db_back_local_path = "/C:/Backup_DataBase/" + db_item + ".bak" 
                     db_back_remote_dir = db_back_remote + server
-                    if os.path.exists(db_back_remote_dir):
-                        pass
-                    else:
-                        os.mkdir(db_back_remote_dir)
 
-                    command = './scp_task.sh %s %s %s %s %s' % (server,'administrator',admin_passwd,db_back_local_path,
-                            db_back_remote_dir)
-                    logger.info(command)
                     try:
-                        res = subprocess.run(command,shell=True,check=True,capture_output=True)
-                        logger.info(str(res.returncode))
-                        logger.info(res.stdout.decode('utf-8'))
-                        #print("error:",res.stderr.decode('utf-8'))
-                        #print(res.stderr == b'')
-                        excp_msg = None
-                        if res.stderr:
-                            logger.error(res.stderr.decode('utf-8'))
-                            msg = "Error,服务器[%s]上传数据库[%s]备份文件失败，错误消息：[%s]" % (server,db_item,res.stderr.decode('utf-8'))
+                        #远程备份或者本地备份
+                        #remote_back_server = '192.168.10.14'
+                        remote_back_server = '192.168.238.7'
+                        #远程服务器
+                        #if server == '192.168.80.34':
+                        if server == '192.168.238.10':
+                            command = '/home/trade/Backup_DataBase/scp_task.sh %s %s %s %s %s' % (server,'administrator',admin_passwd,db_back_local_path,
+                            db_back_remote_dir)
+                            sshClient = ct.sshConnect(remote_back_server, 22, sshuser, sshpw)
+                            if sshClient == 999:
+                                msg = "Failed:服务器[%s],连接失败，请检查密码是否正确" % server
+                                logger.error(msg)
+                                #ct.send_sms_control("NoLimit", msg)
+                            else:
+                                logger.info("Ok: 服务器[%s]连接正常" % remote_back_server)
+                                logger.info(remote_back_server + "::" + command)
+                                #sshRes = ct.sshExecCmd(sshClient, command)
+                                stdin, stdout, stderr = sshClient.exec_command(command)
+                                stdoutstr = stdout.read().decode('utf-8')
+                                ssherr = stderr.read().decode('utf-8')
+                                res_error = ssherr
+                                if ssherr:
+                                    msg = "服务器[%s]ssh执行命令返回错误：[%s]" % (server, ssherr)
+                                    logger.error(msg)
+                                sshRes = []
+                                sshRes = stdoutstr.strip().split('\n')
+                                if sshRes == ['']:
+                                    sshRes = []
+                                logger.info("sshRes:")
+                                logger.info(sshRes)
+                            
+                            sshClient.close()
+                        else:
+                            #本地备份
+                            if os.path.exists(db_back_remote_dir):
+                                pass
+                            else:
+                                os.mkdir(db_back_remote_dir)
+
+                            command = './scp_task.sh %s %s %s %s %s' % (server,'administrator',admin_passwd,db_back_local_path,
+                                    db_back_remote_dir)
+                            logger.info(command)
+                            res = subprocess.run(command,shell=True,check=True,capture_output=True)
+                            logger.info(str(res.returncode))
+                            logger.info(res.stdout.decode('utf-8'))
+                            res_error = res.stderr.decode('utf-8')
+                            #print("error:",res.stderr.decode('utf-8'))
+                            #print(res.stderr == b'')
+                            #excp_msg = None
+                        #if res.stderr:
+                        if res_error:
+                            logger.error(res_error)
+                            msg = "Error,服务器[%s]上传数据库[%s]备份文件失败，错误消息：[%s]" % (server,db_item,res_error)
                             ct.send_sms_control('NoLimit', msg)
                         else:
                             check_list.append(1)
@@ -735,7 +775,7 @@ def backup_db_monitor(info):
                 else:
                     msg = "Error:服务器[%s]数据库[%s]执行备份脚本返回错误：[%s]" % (server, db_item, errmsg)
                     logger.error(msg)
-                    backup_flag = False
+                    #backup_flag = False
                     check_list.append(0)
                     ct.send_sms_control('NoLimit',msg)
             check_flag = (sum(check_list)==len(check_list))
