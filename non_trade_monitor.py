@@ -70,6 +70,8 @@ Created on 2019-07-26 10:01:58
 ###### 校验文件内容是否有重复的记录。
 ##### 16.ssh远程执行命令（自动定时对时任务）
 ###### 通过对服务器的ssh连接，执行对时任务。
+##### 17.开盘前交易所文件检查
+###### 1），复制文件到远程服务器，2）检查交易所基础文件。
 """
 
 
@@ -359,6 +361,7 @@ def follow_monitor_task():
         else:
             logger.warning(u"Error:跟投费率优惠文件检查数据失败!")
 
+
 '''
 #盘后数据库清库检查
 '''
@@ -575,6 +578,39 @@ def ssh_remote_command_task():
         logger.info("所有服务器ssh执行命令正常！")
 
 
+'''
+交易所基础文件盘前检查
+'''
+def exchange_file_monitor_task():
+    
+        linuxInfo = ct.get_server_config('./config/exchange_file_config.txt')
+        
+        check_flag = 0
+        for info in linuxInfo: 
+            hostip = info[0]
+            try:
+                file_checker = rfc.remote_file_check(info)
+                error_file_list = file_checker.check_exchange_file()
+                if len(error_file_list) == 0:
+                    msg = "ok:系统 %s 交易所基础文件检查成功" % hostip
+                    logger.info(msg)
+                    check_flag += 1
+                    ct.send_sms_control('NoLimit', msg)
+                else:
+                    list_str = ';'.join(error_file_list)
+                    msg = "Error:系统 %s 交易所基础文件检查失败,失败的文件：%s" % (hostip, list_str)
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit', msg)
+                    
+            except Exception:
+                msg = "Error:系统 %s 交易所基础文件检查失败，出现异常，请查看服务器日志信息！" % hostip
+                logger.error(msg, exc_info=True)
+                ct.send_sms_control('NoLimit', msg)
+        # if check_flag != 0 and check_flag == len(linuxInfo):
+        #     logger.info(u"OK:交易所基础文件检查成功!")
+        # else:
+        #     logger.warning(u"Error:交易所基础文件检查数据失败!")
+
 
 def main(argv):
     
@@ -601,7 +637,7 @@ def main(argv):
                 print('non_trade_monitor.py -t <task>\n \
                     (default:python non_trade_monitor.py) means auto work by loops. \n \
                     use -t can input the manul single task.\n \
-                    task=["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","self_monitor","follow","ssh_connect"].  \n \
+                    task=["ps","mem","ping","disk","core","xwdm","cleanup","sjdr","self_monitor","follow","ssh_connect","exch_file"].  \n \
                     task="ps" means porcess monitor  \n \
                     task="mem" means memory monitor  \n \
                     task="ping" means ping server monitor  \n \
@@ -615,11 +651,12 @@ def main(argv):
                     task="ssh_connect" means ssh connect monitor  \n \
                     task="ssh_excute" means ssh connect monitor  \n \
                     task="bkdb" means backup db monitor  \n \
+                    task="exch_file" means exhcnage file monitor  \n \
                     task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","bkdb","self_monitor","ssh_connect","ssh_excute"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","bkdb","self_monitor","ssh_connect","ssh_excute","exch_file"]:
                 logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -667,6 +704,9 @@ def main(argv):
         elif manual_task == 'bkdb':
             logger.info("Start to excute the backup db monitor")
             backup_db_monitor_task()
+        elif manual_task == 'exch_file':
+            logger.info("Start to excute the exchange file monitor")
+            exchange_file_monitor_task()
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
 #            fpga_task()

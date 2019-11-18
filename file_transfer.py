@@ -71,18 +71,18 @@ def upload(local_upload, remote_dir, hostip, port, username, password, singlefil
             logger.debug('all: %s, %s, %s' % (root, dirs, files))
             for filespath in files:
                 local_file = os.path.join(root, filespath)
-                logger.debug(11, '%s, %s, %s, %s' % (root, filespath, local_file, local_upload))
+                logger.debug('11,%s, %s, %s, %s' % (root, filespath, local_file, local_upload))
                 if os.path.isfile(local_file):
                     a = local_file.replace(local_upload, '').replace('\\', '/').lstrip('/')
-                    logger.debug('01', a, '[%s]' % remote_dir)
+                    logger.debug('01, %s, [%s]' % (a, remote_dir))
                     remote_file = os.path.join(remote_dir, a).replace('\\', '/')
-                    logger.debug(22, remote_file)
+                    logger.info("22," + remote_file)
                     try:
-                        logger.info(u"文件 %s 上传到 %s" % (local_file, remote_file))
+                        logger.info(u"文件 %s 上传到 %s, %s" % (local_file, hostip, remote_file))
                         sftp.put(local_file, remote_file)                      
                         suffix = remote_file.split('.')[-1]
                         if suffix == 'sh':
-                            logger.debug("sh_file: " + remote_file)
+                            logger.info("sh_file: " + remote_file)
                             try:
                                 sftp.chmod(remote_file, 0o755)
                             except Exception as e :
@@ -105,10 +105,10 @@ def upload(local_upload, remote_dir, hostip, port, username, password, singlefil
                     return 0
             for name in dirs:
                 local_path = os.path.join(root, name)
-                logger.debug(0, local_path, local_upload)
+                logger.info("0" + local_path + local_upload)
                 a = local_path.replace(local_upload, '').replace('\\', '/').lstrip('/')
-                logger.debug(1, a)
-                logger.debug(1, remote_dir)
+                logger.info("1" + a)
+                logger.info("1" + remote_dir)
                 # remote_path = os.path.join(remote_dir, a).replace('\\', '/')
                 remote_path = remote_dir + '/' + a
                 logger.debug("33 " + remote_path)
@@ -141,20 +141,21 @@ def download(local_download, remote_dir, hostip, port, username, password, singl
         else:
             #获取linux下所有文件名
             all_files = get_all_files_in_remote_dir(sftp, remote_dir)
-        logger.debug("all_files:", all_files)
+        logger.info("all_files:")
+        logger.info(all_files)
         #获得远程目录层数
         i = len(re.split('[:/]', remote_dir))
         # 依次get每一个文件
         for x in all_files:            
             filepath = re.split('[:/]', x)
-            logger.debug("filepath:", filepath)
+            logger.info("filepath:" + filepath)
             filename = x.split('/')[-1]
             local_path = local_download + os.sep + '/'.join(filepath[i:-1])
-            logger.debug("local_path:", local_path)
+            logger.info("local_path:" + local_path)
             if not os.path.exists(local_path):
                 os.makedirs(local_path)
             local_filename = os.path.join(local_path, filename)
-            logger.debug("local_filename:", local_filename)
+            logger.info("local_filename:" + local_filename)
             logger.info(u'文件 %s 下载中...' % filename)
             sftp.get(x, local_filename)
         logger.info(hostip + ' Download file success!')
@@ -177,9 +178,9 @@ def main(argv):
         lindir = ''
         singlefile = ''
         try:
-            opts, args = getopt.getopt(argv,"hm:w:l:f:",["method=", "windir=", "lindir=" ,"filename="])
+            opts, args = getopt.getopt(argv,"hm:l:r:f:",["method=", "local_dir=", "remote_dir=" ,"filename="])
         except getopt.GetoptError:
-            print('file_transfer.py -m <method> -w <windir> -l <lindir> -f <filename>')
+            print('file_transfer.py -m <method> -l <local_dir> -r <remote_dir> -f <filename>')
             sys.exit(2)
         for opt, arg in opts:
             if opt == '-h':
@@ -192,9 +193,9 @@ def main(argv):
                 sys.exit()
             elif opt in ("-m", "--method"):
                 ftmethod = arg
-            elif opt in ("-w", "--windir"):
+            elif opt in ("-l", "--local_dir"):
                 windir = arg
-            elif opt in ("-l", "--lindir"):
+            elif opt in ("-r", "--remote_dir"):
                 lindir = arg
             elif opt in ("-f", "--filename"):
                 singlefile = arg

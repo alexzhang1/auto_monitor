@@ -158,7 +158,7 @@ def check_money_value(info, cursor, conn):
         for ccdict in cclists:
             tablename = ccdict["tablename"]
             fieldsstr = ccdict["fields"]
-            logger.debug("fieldsstr:" + fieldsstr)
+            logger.info("fieldsstr:" + fieldsstr)
             sql = "SELECT " + fieldsstr + " FROM " + tablename
             (res,des) = mt.only_fetchall(cursor, conn, sql)   
             if res == [] or res == None:
@@ -166,10 +166,10 @@ def check_money_value(info, cursor, conn):
                 check_flag = False
             else:          
                 for item in res:
-                    logger.debug(item)
+                    logger.info(item)
                     for iitem in item:                        
                         if iitem >= 0:
-                            logger.debug("Ok: Check DBserver: %s table: %s moneyfields: %s" % (serverip, tablename, fieldsstr))
+                            logger.info("Ok: Check DBserver: %s table: %s moneyfields: %s" % (serverip, tablename, fieldsstr))
                             check_flag = True
                         else:
                             msg = "Failed: Check DBserver: %s table: %s Money Value: %d is minus" % (serverip, tablename, iitem)
