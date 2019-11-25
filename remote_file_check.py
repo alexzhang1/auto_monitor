@@ -18,6 +18,8 @@ import paramiko
 import stat
 import re
 import pandas as pd
+import os
+import subprocess
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 
@@ -245,45 +247,51 @@ class remote_file_check:
         logger.info("last_workday:" + last_workday)
         winserver = self.follow_hostip
         admin_passwd = self.follow_password
+        admin_passwd = 'adminadmin\$8'
+        sjs_file_dir = "/home/trade/ExchFile/sjs_file/"
         copy_file_name = "SJSGB" + file_date_str + ".DBF"
-        new_file_name = "SJSGB" + self.local_date + ".DBF"
-        win_file_local_path = "/C:/Backup_DataBase/exchange_test/" + copy_file_name 
-        exchange_back_remote_dir = "/home/trade/exchange_file/" + new_file_name
-        command = '/home/trade/exchange_file/scp_task.sh %s %s %s %s %s' % (winserver,'administrator',admin_passwd,win_file_local_path,
-        exchange_back_remote_dir)
-        #sshClient = ct.sshConnect(self.hostip, self.port, self.username, self.password)
-        if self.sshClient == 999:
-            msg = "Failed:服务器[%s],连接失败，请检查密码是否正确" % self.hostip
-            logger.error(msg)
-            #ct.send_sms_control("NoLimit", msg)
+        new_file_name = "SJSGB" + self.local_date[-4:] + ".DBF"
+        #print(new_file_name)
+        win_file_local_path = "/D:/tora/back_cmd/sjs_file/" + copy_file_name 
+        sjs_back_remote_path = sjs_file_dir + new_file_name
+        command = '%sscp_task.sh %s %s %s %s %s' % (sjs_file_dir,winserver,'administrator',admin_passwd,win_file_local_path,
+                    sjs_back_remote_path)
+        logger.info("cp_file_Command:" + command)
+        #本地执行
+        #com_res = os.system(command)
+        ret = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+        com_res = ret.returncode
+        logger.info("com_res:" + str(com_res))
+        logger.info("ret.stdout:")
+        logger.info(ret.stdout)
+        logger.info("ret.stderr:")
+        logger.info(ret.stderr)
+        #检查文件是否在
+        command_check = "ls " + sjs_back_remote_path
+        logger.info("command_check:" + command_check)
+        check_res = subprocess.run(command_check,shell=True,stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+        logger.info("check_copy_file:")
+        logger.info(check_res.stdout)
+        #如果执行失败的话，再执行一次。
+        if com_res != 0 or check_res.stdout=='':
+            logger.info("Failed:从服务器[%s]复制文件[%s]第一次失败" % (winserver,win_file_local_path))
+            ret2 = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+            com_res2 = ret2.stdout
+            logger.info("第二次执行结果com_res2: " + str(com_res2))
         else:
-            logger.info("Ok: 服务器[%s]连接正常" % self.hostip)
-            logger.info(self.hostip + "::" + command)
-            #sshRes = ct.sshExecCmd(sshClient, command)
-            stdin, stdout, stderr = self.sshClient.exec_command(command)
-            stdoutstr = stdout.read().decode('utf-8')
-            ssherr = stderr.read().decode('utf-8')
-            res_error = ssherr
-            if ssherr:
-                msg = "服务器[%s]ssh执行命令上传文件[%s]返回错误：[%s]" % (self.hostip, win_file_local_path, res_error)
-                logger.error(msg)
-                ct.send_sms_control("NoLimit", msg)
-            sshRes = []
-            sshRes = stdoutstr.strip().split('\n')
-            if sshRes == ['']:
-                sshRes = []
-            logger.info("sshRes:")
-            logger.info(sshRes)
-        
-        ct.sshClose(self.sshClient)
+            logger.info("Ok:从服务器[%s]复制文件[%s]成功" % (winserver,win_file_local_path)) 
+
 
         #从linux1复制scp到linux2,linux3，要先做scp免密认证
         #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
-        for linux_r_ip in ['192.168.238.8']:
-            #linux_r_ip = '192.168.238.8'
+        for linux_r_ip in ["10.188.80.16","192.168.253.197"]:
+            #linux_r_ip = '192.168.238.7'
             sshClient_r = ct.sshConnect(linux_r_ip, self.port, self.username, self.password)
-            linux_remote = '/home/trade/exchange_file/'
-            command_linux_r = "scp " + self.username + "@" + self.hostip + ":" + exchange_back_remote_dir + " " + linux_remote
+            #linux_remote = '/home/trade/ExchFile/sjs_fie/'
+            command_linux_r = "scp " + self.username + "@" + self.hostip + ":" + sjs_back_remote_path + " " + sjs_back_remote_path
             logger.info(command_linux_r)
             sshRes = ct.sshExecCmd(sshClient_r, command_linux_r)
     #        print("sshRes:",sshRes)
@@ -292,7 +300,7 @@ class remote_file_check:
             time.sleep(2)
             #匹配文件，并校验文件内容是否有重复的记录
             #command2 = "ls " + self.remote_dir + self.next_date + "*"
-            command2 = "ls " + linux_remote + new_file_name
+            command2 = "ls " + sjs_back_remote_path
             logger.info(command2)
             sshRes2 = ct.sshExecCmd(sshClient_r, command2)
             ct.sshClose(sshClient_r)
@@ -305,27 +313,57 @@ class remote_file_check:
                 logger.info("服务器[%s],文件[%s]匹配到，复制成功！" % (linux_r_ip, new_file_name))
         
         #2，检查交易所基础文件是否存在，比对文件大小是否为0
-        file_list = ["error_log_","download"]
-        #check_file_list = []
+        sse_file_dir = "/home/trade/ExchFile/sse/"
+        sse_file = ["cpxx0201{mmdd}.txt", "fjy{tradeday}.txt", "gzlx.{Mdd}", "kxx{mmdd}.txt", "xzsl{mmdd}.txt",
+                    "dbp{mmdd}.txt", "sfpm01{mmdd}.txt"]
+        szse_file_dir = "/home/trade/ExchFile/szse/"
+        szse_file = ["securities_{tradeday}.xml", "cashauctionparams_{tradeday}.xml", "issueparams_{tradeday}.xml",
+                    "rightsissueparams_{tradeday}.xml","securityswitch_{tradeday}.xml", "imcparams_{tradeday}.xml", 
+                    "imcsecurityparams_{tradeday}.xml", "imcexchangerate_{tradeday}.xml","hkexreff04_{tradeday}.txt",
+                     "hkexzxjc_{tradeday}.txt"]
+
+        mmdd = self.local_date[-4:]
+        tradeday = self.local_date
+        Mdd = hex(int(self.local_date[-4:-2]))[-1] + self.local_date[-2:]
+        new_sse_file_name=[]
+        new_szse_file_name=[]
+        check_file_list = [sjs_back_remote_path]
+
+        for file_name in sse_file:
+            cc = file_name.replace("{mmdd}",mmdd).replace("{Mdd}",Mdd).replace("{tradeday}",tradeday)
+            full_path = sse_file_dir + cc
+            new_sse_file_name.append(cc)
+            check_file_list.append(full_path)
+        print(new_sse_file_name)
+
+        for file_name in szse_file:
+            cc = file_name.replace("{tradeday}",tradeday)
+            full_path = szse_file_dir + cc
+            new_szse_file_name.append(cc)
+            check_file_list.append(full_path)
+        print(new_szse_file_name)
+
+        #file_list = ["error_log_","download"]
         error_file_list = []
-        #ndate = self.local_date.replace('-','')
-        self.sshClient = ct.sshConnect(self.hostip, self.port, self.username, self.password)
-        for file_pre in file_list:
-            file_path = self.remote_dir + file_pre + self.local_date + ".txt"
-            try:     
-                file_size = ct.get_remote_filesize(self.sshClient,file_path)     
-                if file_size != '0':
-                    logger.info("Ok: 服务器 %s 文件 %s 的大小为 %s ，检查交易所基础数据成功!" % (self.hostip, file_path, file_size))
-                else:
-                    msg = "Error: 盘前交易所基础文件检查失败，服务器 %s 文件 %s 的大小为0或者文件不存在！" % (self.hostip, file_path)
+        check_server_list = ["10.188.80.16","192.168.253.197"]
+        for check_server_ip in check_server_list:
+            self.sshClient = ct.sshConnect(check_server_ip, self.port, self.username, self.password)
+            for file_path in check_file_list:
+                #file_path = self.remote_dir + file_pre + self.local_date + ".txt"
+                try:     
+                    file_size = ct.get_remote_filesize(self.sshClient,file_path)     
+                    if file_size != '0':
+                        logger.info("Ok: 服务器 %s 文件 %s 的大小为 %s ，检查交易所基础数据成功!" % (check_server_ip, file_path, file_size))
+                    else:
+                        msg = "Error: 盘前交易所基础文件检查失败，服务器 %s 文件 %s 的大小为0或者文件不存在！" % (check_server_ip, file_path)
+                        logger.error(msg)
+                        error_file_list.append(file_path)
+                except Exception as e:
+                    msg = "服务器 %s 获取交易所基础文件%s 大小失败，错误信息： %s" % (check_server_ip, file_path, str(e))
                     logger.error(msg)
-                    error_file_list.append(file_pre)
-            except Exception as e:
-                msg = "服务器 %s 获取委托回传文件%s 大小失败，错误信息： %s" % (self.hostip, file_path, str(e))
-                logger.error(msg)
-                error_file_list.append(file_pre)
-        ct.sshClose(self.sshClient)
-        return error_file_list
+                    error_file_list.append(file_path)
+            ct.sshClose(self.sshClient)
+            return error_file_list
 
         
 def main(argv):

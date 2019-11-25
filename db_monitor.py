@@ -136,6 +136,28 @@ def check_table_increase(info, cursor, conn):
                 ct.send_sms_control('db_trade', msg)
                 check_flag = False
                 return check_flag
+                #检查oserder/system.log是否服务断开
+                # trade_server = info["trade_server_ip"]
+                # ts_username = info["ts_user"]
+                # ts_password = info["ts_pw"]
+                # check_command = 'grep "error" /home/trade/myproject/log/system.log'
+                # order_server_ip =
+                # order_server_user =
+                # sshClient_trade = ct.sshConnect(trade_server, 22, ts_username, ts_password)
+                # try:
+                #     sshRes = ct.sshExecCmd(sshClient_trade, check_command)
+                # except:
+                #     logger.info("执行远程命令异常！")
+                # if sshRes==[]:
+                #     msg = "数据库[%s]表[%s]记录未增长，但交易服务器[%s]工作正常!" % (serverip,tablename,trade_server)
+                #     logger.info(msg)
+                # else:
+                #     error_res = ';'.join(sshRes)
+                #     logger.error("报盘日志有错误error")
+                #     ct.send_sms_control('db_trade', msg)
+                #     check_flag = False
+                # return check_flag
+                # sshClient_trade.close()
     except Exception:
         logger.warning('Faild to check increase!', exc_info=True)
     finally:
@@ -659,7 +681,7 @@ def backup_db_monitor(info):
         user = info["user"]
         password = info["password"]
         admin_passwd = info["admin_passwd"]
-        admin_passwd = "123.com"
+        admin_passwd = "adminadmin\$8"
         dbname = info["dbname"]
         upload_dbname = info["upload_dbname"] 
         db_back_local = info["db_back_local"]

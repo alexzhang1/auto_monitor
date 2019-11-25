@@ -592,18 +592,18 @@ def exchange_file_monitor_task():
                 file_checker = rfc.remote_file_check(info)
                 error_file_list = file_checker.check_exchange_file()
                 if len(error_file_list) == 0:
-                    msg = "ok:系统 %s 交易所基础文件检查成功" % hostip
+                    msg = "ok:所有系统交易所基础文件检查成功"
                     logger.info(msg)
                     check_flag += 1
                     ct.send_sms_control('NoLimit', msg)
                 else:
                     list_str = ';'.join(error_file_list)
-                    msg = "Error:系统 %s 交易所基础文件检查失败,失败的文件：%s" % (hostip, list_str)
+                    msg = "Error:有系统交易所基础文件检查失败,失败的文件：%s" % list_str
                     logger.error(msg)
                     ct.send_sms_control('NoLimit', msg)
                     
             except Exception:
-                msg = "Error:系统 %s 交易所基础文件检查失败，出现异常，请查看服务器日志信息！" % hostip
+                msg = "Error:系统交易所基础文件检查失败，出现异常，请查看服务器日志信息！"
                 logger.error(msg, exc_info=True)
                 ct.send_sms_control('NoLimit', msg)
         # if check_flag != 0 and check_flag == len(linuxInfo):
