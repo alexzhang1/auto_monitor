@@ -259,14 +259,19 @@ class remote_file_check:
         logger.info("cp_file_Command:" + command)
         #本地执行
         #com_res = os.system(command)
-        ret = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
-        com_res = ret.returncode
-        logger.info("com_res:" + str(com_res))
-        logger.info("ret.stdout:")
-        logger.info(ret.stdout)
-        logger.info("ret.stderr:")
-        logger.info(ret.stderr)
+        try:
+            ret = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+            com_res = ret.returncode
+            logger.info("com_res:" + str(com_res))
+            logger.info("ret.stdout:")
+            logger.info(ret.stdout)
+            logger.info("ret.stderr:")
+            logger.info(ret.stderr)
+        except Exception as e:
+            msg = "复制文件异常：" + str(e)
+            com_res = 256
+            logger.error(msg)
         #检查文件是否在
         command_check = "ls " + sjs_back_remote_path
         logger.info("command_check:" + command_check)
