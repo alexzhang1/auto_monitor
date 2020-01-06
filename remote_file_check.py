@@ -247,7 +247,7 @@ class remote_file_check:
         logger.info("last_workday:" + last_workday)
         winserver = self.follow_hostip
         admin_passwd = self.follow_password
-        admin_passwd = 'adminadmin\$8'
+        admin_passwd = "adminadmin\$8"
         sjs_file_dir = "/home/trade/ExchFile/sjs_file/"
         copy_file_name = "SJSGB" + file_date_str + ".DBF"
         new_file_name = "SJSGB" + self.local_date[-4:] + ".DBF"
@@ -292,7 +292,7 @@ class remote_file_check:
 
         #从linux1复制scp到linux2,linux3，要先做scp免密认证
         #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
-        for linux_r_ip in ["10.188.80.16","192.168.253.197"]:
+        for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67"]:
             #linux_r_ip = '192.168.238.7'
             sshClient_r = ct.sshConnect(linux_r_ip, self.port, self.username, self.password)
             #linux_remote = '/home/trade/ExchFile/sjs_fie/'

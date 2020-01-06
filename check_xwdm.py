@@ -84,6 +84,7 @@ class check_csv_file:
         所有的xwdm字段配置在'./config/xwdm_check_list.csv'中，根据上面的字段匹配对应的列，和数据库验证对比。
         不在奇点系统里的客户记录，打印出来。
     '''
+    
     def check_xwdm(self):
         
         xwdm_file='./config/xwdm_check_list.csv'
@@ -119,11 +120,12 @@ class check_csv_file:
             
         error_kh_list = []
         if len(xwdm_list) != 0:
-            logger.debug(u"客户席位代码列表为：")
-            logger.debug(xwdm_list)           
-            for xwdm_item in xwdm_list:
-                if (xwdm_item[1] not in check_column):
-                    error_kh_list.append(xwdm_item)
+            logger.info(u"客户席位代码列表为：")
+            logger.info(xwdm_list)      
+            #20191226:修改临时检查，只检查文件存在即可。 
+            # for xwdm_item in xwdm_list:
+            #     if (xwdm_item[1] not in check_column):
+            #         error_kh_list.append(xwdm_item)
         else:
             msg = "error: 没有取到服务器 %s GDH文件 %s，请检查文件路径是否正确！" % (self.hostip, filepath)
             logger.error(msg)
@@ -131,6 +133,7 @@ class check_csv_file:
             error_kh_list=[['999','999']]
         
         return error_kh_list
+
 
         
 def main(argv):

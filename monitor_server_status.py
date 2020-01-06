@@ -902,7 +902,7 @@ class MonitorServer:
     core文件监控
     """
     def core_file_info(self,info):
-        command = 'find /home/trade/temp -name core.*'
+        command = 'find /home/trade -name core.*'
         hostip = info[0]
 #        servername = info[4]
         logger.info("command: " + command)

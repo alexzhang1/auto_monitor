@@ -84,18 +84,32 @@ def db_init_monitor_task():
             
         for i in thrlist:
             threads[i].start()
+        threadResult = []
         for i in thrlist:       
             threads[i].join()
-            threadResult = threads[i].get_result()
-            sysstr = platform.system()
-            if (not threadResult) :
-                logger.error("error:盘前数据库初始化数据错误，请检查详细错误信息")
-#                send_sms_control("db_init", "error:奇点服务器盘前数据库初始化数据错误，请检查详细错误信息")
-                if (sysstr == "Windows"):
-                    ct.readTexts("Database init Worning") 
+#             threadResult = threads[i].get_result()
+#             sysstr = platform.system()
+#             if (not threadResult) :
+#                 logger.error("error:盘前数据库初始化数据错误，请检查详细错误信息")
+# #                send_sms_control("db_init", "error:奇点服务器盘前数据库初始化数据错误，请检查详细错误信息")
+#                 if (sysstr == "Windows"):
+#                     ct.readTexts("Database init Worning") 
+#             else:
+#                 logger.info("OK:数据库init检查正常")
+#                 ct.send_sms_control("db_init", "OK:盘前数据库init检查正常")
+            if (threads[i].get_result()):
+                threadResult.append(1)
             else:
-                logger.info("OK:数据库init检查正常")
-                ct.send_sms_control("db_init", "OK:盘前数据库init检查正常")
+                threadResult.append(0)
+        check_flag = (sum(threadResult)==len(threadResult))
+        if (not check_flag) :
+            logger.error("error:有奇点服务器盘前数据库初始化数据错误，请检查详细错误信息")
+            logger.error(threadResult)
+            #ct.send_sms_control("NoLimit", "error:数据库备份检查失败，请检查详细错误信息")
+        else:
+            logger.info("OK:盘前数据库init检查正常")
+            ct.send_sms_control("db_init", "OK:盘前数据库init检查正常")
+                
 
 
 

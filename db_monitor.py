@@ -66,6 +66,10 @@ def check_table_count(info, cursor, conn):
     serverip = info["serverip"]
 #    servername = info["servername"]
     cclists = info["countcheck"]   
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        return True
     try:
         for ccdict in cclists:
             tablename = ccdict["tablename"]
@@ -101,7 +105,12 @@ def check_table_increase(info, cursor, conn):
 #    password = info["password"]
     dbname = info["dbname"]
     cclists = info["increasecheck"]   
-    
+    print("increasecheck:", len(cclists),cclists)
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        return True
+
     countfile = "./tempdata/" + serverip + "_" + dbname + "_count.json"
     try:
         if os.path.exists(countfile):
@@ -176,6 +185,10 @@ def check_money_value(info, cursor, conn):
     serverip = info["serverip"]
 #    servername = info["servername"]
     cclists = info["moneycheck"]
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        return True
     try:
         for ccdict in cclists:
             tablename = ccdict["tablename"]
@@ -214,6 +227,10 @@ def check_date_value(info, cursor, conn):
 #    servername = info["servername"]
 #    ndates = dt.datetime.now().strftime("%Y%m%d")
     cclists = info["datecheck"]
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        return True
     try:
 #            filedlist=[]
         for ccdict in cclists:
@@ -253,6 +270,10 @@ def check_records_value(info, cursor, conn):
     serverip = info["serverip"]
 #    servername = info["servername"]
     cclists = info["valuecheck"]
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        return True
     try:
         for ccdict in cclists:
             tablename = ccdict["tablename"]
@@ -375,6 +396,10 @@ def check_remote_csv_ZJXX(info, cursor, conn):
     sshuser = info['sshuser']
     sshpw = info['sshpw']
     csv_remote_dir_i = info['csv_remote_dir']
+    #配置为空是直接返回成功
+    if csv_remote_dir_i == '':
+        logger.info("配置为空，不需要检查！")
+        return True
     csv_remote_dir = csv_remote_dir_i.replace('{ndates}', ndates)
       
     check_flag = False
@@ -386,7 +411,9 @@ def check_remote_csv_ZJXX(info, cursor, conn):
 #    command = "cat " + zjxxfile_path + " | awk -F\",\" \'{OFS=\",\";print $1,$2}\'"
     logger.debug("command:" + command)
     sshClient = ct.sshConnect(sship, sshport, sshuser, sshpw)
-    
+    if sshClient == 999:
+        logger.error("服务器%s ssh 连接失败,请检查密码是否正确!" % sship)
+        return False    
     sshRes = []
     sshRes = ct.sshExecCmd(sshClient, command)
     ct.sshClose(sshClient)
