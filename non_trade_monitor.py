@@ -417,12 +417,12 @@ def before_cleanup_db_monitor_task():
             threadResult = threads[i].get_result()
             sysstr = platform.system()
             if (not threadResult) :
-                logger.error("error:数据库盘后清库检查失败，请检查详细错误信息")
-                ct.send_sms_control("NoLimit", "error:数据库盘后清库检查失败，请检查详细错误信息")
+                logger.error("error:数据库盘后清库盘前检查失败，请检查详细错误信息")
+                ct.send_sms_control("NoLimit", "error:数据库盘后清库盘前检查失败，请检查详细错误信息")
                 if (sysstr == "Windows"):
                     ct.readTexts("Database cleanup Worning") 
             else:
-                logger.info("OK:数据库盘后清库检查正常")
+                logger.info("OK:数据库盘后清库盘前检查正常")
 #                ct.send_sms_control("NoLimit", "OK:数据库盘后清库检查失败检查正常")
 
 

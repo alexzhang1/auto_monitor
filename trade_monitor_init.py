@@ -111,58 +111,7 @@ def db_init_monitor_task():
             ct.send_sms_control("db_init", "OK:盘前数据库init检查正常")
                 
 
-
-
     
- 
-#启动程序时清理一下表trade_monitor_pare.json
-# 
-
-    
-
-
-'''
-短信发送控制，总短信数控制，和单项监控短信控制不超过3次
-'''
-def send_sms_control(sms_type, msg, phone='13162583883,13681919346'):
-    
-#    sms_type='ps_port'
-#    msg = 'test'
-#    phone='13162583883,13681919346'
-    
-    countfile = './config/trade_monitor_para.json'
-    with open(countfile, 'r') as f:
-        Json_dic = json.load(f)
-        logger.debug(Json_dic)
-    total_used_count = Json_dic["sms_no_control"]["total_used_count"]
-    total_count = Json_dic["sms_no_control"]["total_count"]
-    single_limit = Json_dic["sms_no_control"]["single_limit"]
-    total_count = Json_dic["sms_no_control"]["total_count"]
-    
-    if sms_type == "NoLimit":
-        single_times = 0
-    else:
-        try:
-            single_times = Json_dic["sms_no_control"][sms_type]
-        except Exception as e:
-            logger.error(str(e))
-            single_times = 999
-    logger.info("单项已发送短信次数：%d" % single_times)
-    logger.info("已发送短信总条数：%d" % total_used_count)
-    #小于限制时才允许发送短信
-    if single_times != 999 and total_used_count < total_count and single_times <= single_limit:
-#        ct.fortunesms(msg, phone)
-        #发送后增加已发送的次数
-        count = len(phone.split(','))
-        Json_dic["sms_no_control"]["total_used_count"] = total_used_count + count
-        Json_dic["sms_no_control"][sms_type] = single_times + 1
-        
-        json_str = json.dumps(Json_dic, indent=4)
-        with open(countfile, 'w') as json_file:
-            json_file.write(json_str)
-    else:
-        logger.error('SMS send count is out of Max value')
-
 
 def main(argv):
     

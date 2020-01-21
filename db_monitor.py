@@ -7,6 +7,7 @@ Created on Wed May 29 14:18:45 2019
 盘前加入了检查KHXX，csv上场文件和数据库的对比，比较客户资金是否一致，不一致检查出入金记录和冻结资金冻结手续费。
 盘中检查表数据是否增长；
 需要配置好table_check.json配置文件。
+20200121,盘中检查Order表的错误信息，过滤资金不足的错误信息
 """
 
 #import pymssql
@@ -70,6 +71,7 @@ def check_table_count(info, cursor, conn):
     if len(cclists) == 0:
         logger.info("配置为空，不需要检查！")
         return True
+    check_list = []
     try:
         for ccdict in cclists:
             tablename = ccdict["tablename"]
@@ -81,16 +83,103 @@ def check_table_count(info, cursor, conn):
             logger.debug("result_count: %d", result_count)
             if result_count == count:
                 logger.info("Ok: Check DBserver: %s table: %s count: %d" % (serverip, tablename, result_count))
-                check_flag = True
+                #check_flag = True
+                check_list.append(1)
             else:
                 msg = "Failed: Check DBserver: %s table: %s count: %d not equal %d" % (serverip, tablename, result_count, count)
                 logger.error(msg)
                 ct.send_sms_control('db_init', msg)
-                check_flag = False
-                return check_flag
+                #check_flag = False
+                #return check_flag
+                #20200115修改只检查一次错误就退出的问题
+                check_list.append(0)
     except Exception:
-        logger.error(('Faild to check [%s] table count!' % serverip), exc_info=True)            
+        logger.error(('Faild to check [%s] table count!' % serverip), exc_info=True)
+        check_list.append(999)
+    check_flag = (sum(check_list)==len(check_list))
+    if (not check_flag) :
+        logger.error("error:有数据库表数量检查失败，请检查详细错误信息")
+        logger.error(check_list)
+    else:
+        logger.info("OK:所有数据库表数量检查成功")   
+
     return check_flag
+
+
+'''
+根据自定义的条件查询记录,json配置文件中的info["customizedcheck"]["condition"]，检查是否存在并持续增加则报警。
+'''
+
+def check_customized_count(info, cursor, conn):
+    
+    serverip = info["serverip"]
+#    servername = info["servername"]
+    cclists = info["customizedcheck"]   
+    dbname = info["dbname"]
+    # "tablename": "dbo.t_SSEOrder",
+    # "condition": " WHERE ErrorID = 17574",
+    # "StatusMsg": "17574:资金不足以支付保证金"
+    #配置为空是直接返回成功。
+    if len(cclists) == 0:
+        logger.info("配置为空，不需要检查！")
+        check_flag = True
+        return True
+    
+    countfile = "./tempdata/" + serverip + "_" + dbname + "_customized_count.json"
+    if os.path.exists(countfile):
+        with open(countfile, 'r') as f:
+            countdict = json.load(f)
+        logger.info("countdict")
+        logger.info(countdict)
+    else:
+        countdict = {}       
+        for dic in cclists:
+            countdict[str(dic["No"])] = 0           
+        logger.info("countdict")
+        logger.info(countdict)
+
+    check_list = []
+    try:
+        for ccdict in cclists:
+            tablename = ccdict["tablename"]
+            condition = ccdict["condition"]
+            StatusMsg = ccdict["StatusMsg"]
+            No = str(ccdict["No"])
+            precount = countdict[No]
+            nowcount = 0
+
+            sql = "SELECT count(*) FROM " + tablename + condition
+            logger.info("sql: %s", sql)
+            (res,des) = mt.only_fetchall(cursor, conn, sql)       
+            nowcount = res[0][0]
+            logger.info("result_nodw_count: %d", nowcount)
+            logger.debug("nowcount: %d", nowcount)
+            countdict[No] = nowcount
+            if nowcount <= precount:
+                logger.info("Ok: Check DBserver: [%s] dbname : [%s] table: [%s] 记录信息: [%s] 记录条数: [%d] is not increase" % (serverip, dbname, tablename, StatusMsg, nowcount))
+                check_list.append(1)
+            else:
+                msg = "Failed: Check DBserver: [%s] dbname : [%s] table: [%s] 新增的记录信息: [%s] 记录条数: [%d]" % (serverip, dbname, tablename, StatusMsg, nowcount)
+                logger.error(msg)
+                ct.send_sms_control('errorID', msg, '13681919346,13501944578,13681731315,13816025252,18917952875,15821438177')
+                check_list.append(0)
+    except Exception:
+        logger.error(('Faild to check [%s] table count!' % serverip), exc_info=True)
+        check_list.append(999)
+       
+    finally:
+        json_str = json.dumps(countdict, indent=4)
+        with open(countfile, 'w') as json_file:
+            json_file.write(json_str)   
+
+        check_flag = (sum(check_list)==len(check_list))
+        if (not check_flag) :
+            logger.error("error:有数据库表自定义检查失败，请检查详细错误信息")
+            logger.error(check_list)
+        else:
+            logger.info("OK:所有数据库表自定义检查成功")   
+
+        return check_flag
 
 
 '''
@@ -112,6 +201,7 @@ def check_table_increase(info, cursor, conn):
         return True
 
     countfile = "./tempdata/" + serverip + "_" + dbname + "_count.json"
+    check_list = []
     try:
         if os.path.exists(countfile):
             with open(countfile, 'r') as f:
@@ -138,13 +228,14 @@ def check_table_increase(info, cursor, conn):
             countdict[str(tablename)] = nowcount
             if nowcount > precount:
                 logger.info("Ok: Check DBserver: %s dbname %s increase table : %s nowcount: %d precount: %d" % (serverip, dbname, tablename, nowcount, precount))
-                check_flag = True
+                check_list.append(1)
             else:
                 msg = "Failed: Check DBserver: %s dbname %s not increase table: %s nowcount: %d precount %d" % (serverip, dbname, tablename, nowcount, precount)
                 logger.error(msg)
                 ct.send_sms_control('db_trade', msg)
-                check_flag = False
-                return check_flag
+                # check_flag = False
+                # return check_flag
+                check_list.append(0)
                 #检查oserder/system.log是否服务断开
                 # trade_server = info["trade_server_ip"]
                 # ts_username = info["ts_user"]
@@ -169,11 +260,20 @@ def check_table_increase(info, cursor, conn):
                 # sshClient_trade.close()
     except Exception:
         logger.warning('Faild to check increase!', exc_info=True)
+        check_list.append(0)
     finally:
         json_str = json.dumps(countdict, indent=4)
         with open(countfile, 'w') as json_file:
-            json_file.write(json_str)        
-    return check_flag
+            json_file.write(json_str)      
+
+        check_flag = (sum(check_list)==len(check_list))
+        if (not check_flag) :
+            logger.error("error:有数据库表数量检查失败，请检查详细错误信息")
+            logger.error(check_list)
+        else:
+            logger.info("OK:所有数据库数据库表数量检查成功")  
+            
+        return check_flag
 
 
 '''
@@ -501,7 +601,7 @@ def check_remote_csv_ZJXX(info, cursor, conn):
                     msg = "error:The csv ZJZH: %s KYJE not equal to DB: %s UsefulMoney, \
                         TransferMoney is %.2f,Difference is: %.2f" % (index, serverip, TransferMoney,round(row['InOutMoney'], 2))
                     logger.error(msg)
-                    ct.send_sms_control('db_init', msg)
+                    #ct.send_sms_control('db_init', msg)
             check_flag = (check_count == len(def_khje))
         else:
             logger.info("ok:The csv KYJE equal to DB UsefulMoney")
@@ -565,11 +665,11 @@ def after_cleanup_db_monitor(info):
                 logger.info(fld_sys_stat_list)
 
                 if SystemStatus =='2' and (fld_sys_stat_list.count('2') == len(fld_sys_stat_list)):
-                    msg = "服务器[%s]盘后数据库检查成功" % server
+                    msg = "服务器[%s]盘后数据库清库检查成功" % server
                     logger.info(msg)
                     check_flag = True
                 else:
-                    msg = "Error:服务器[%s]盘后数据库检查失败,数据库[%s]表t_SystemStatus字段SystemStatus的值为[%s],"\
+                    msg = "Error:服务器[%s]盘后数据库清库检查失败,数据库[%s]表t_SystemStatus字段SystemStatus的值为[%s],"\
                         "表t_TransNum字段fld_sys_stat字段值为:[%s]" \
                             % (server, dbname, SystemStatus, (';'.join(fld_sys_stat_list)))
                     logger.error(msg)
@@ -659,6 +759,10 @@ def before_cleanup_db_monitor(info):
             logger.info("sql3:" + sql3)
             (res3,des3) = mt.only_fetchall(cursor, conn, sql3)
             t_EQCommand_count = int(res3[0][0])
+            if res3 == None:
+                t_EQCommand_count = 0
+            else:
+                t_EQCommand_count = int(res3[0][0])
             logger.info("t_EQCommand_count:" + str(t_EQCommand_count))
 
             fields = ['fld_system_id','fld_trans_num','fld_sys_stat']
@@ -759,11 +863,11 @@ def backup_db_monitor(info):
 
                     try:
                         #远程备份或者本地备份
-                        #remote_back_server = '192.168.10.14'
-                        remote_back_server = '192.168.238.7'
+                        remote_back_server = '192.168.10.14'
+                        #remote_back_server = '192.168.238.7'
                         #远程服务器
-                        #if server == '192.168.80.34':
-                        if server == '192.168.238.10':
+                        if server == '192.168.80.34':
+                        #if server == '192.168.238.10':
                             command = '/home/trade/Backup_DataBase/scp_task.sh %s %s %s %s %s' % (server,'administrator',admin_passwd,db_back_local_path,
                             db_back_remote_dir)
                             sshClient = ct.sshConnect(remote_back_server, 22, sshuser, sshpw)
@@ -900,8 +1004,8 @@ def trading_monitor(info):
         (cursor, conn) = mt.connect_mssql(db_info)
         
         if cursor != None:           
-            check_result = check_table_increase(info, cursor, conn)
-            logger.debug('increase_check:' + str(check_result))
+            check_result = check_table_increase(info, cursor, conn) and check_customized_count(info, cursor, conn)
+            logger.info('increase_check:' + str(check_result))
         else:
             logger.error('Can not get cursor!')
             check_result = False

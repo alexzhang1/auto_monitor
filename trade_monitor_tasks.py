@@ -25,6 +25,8 @@ Created on 2019-07-16 15:36:39
 ##### 通过traderapi连接后查询行情数据是否正确。
 ##### 11.tcp连接数监控
 ##### 盘中检查tcp连接数是否超限。
+##### 12.检查spOrder表的资金不足的错误信息
+##### 盘中检查order表的ErrorID。
 """
 
 import time
