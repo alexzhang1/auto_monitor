@@ -16,6 +16,7 @@ upload
 download
 config
 common_*
+test*
 
 # C extensions
 *.so
