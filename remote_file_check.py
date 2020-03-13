@@ -290,7 +290,7 @@ class remote_file_check:
             logger.info("Ok:从服务器[%s]复制文件[%s]成功" % (winserver,win_file_local_path)) 
 
 
-        #从linux1复制scp到linux2,linux3，要先做scp免密认证
+        #从linux1复制scp到linux2,linux3，要先做scp免密认证，ttt
         #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
         for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67"]:
             #linux_r_ip = '192.168.238.7'
