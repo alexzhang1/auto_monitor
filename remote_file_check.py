@@ -290,9 +290,9 @@ class remote_file_check:
             logger.info("Ok:从服务器[%s]复制文件[%s]成功" % (winserver,win_file_local_path)) 
 
 
-        #从linux1复制scp到linux2,linux3，要先做scp免密认证，ttt
+        #从linux1复制scp到linux2,linux3，要先做scp免密认证，从目的IP到本地7的免密验证。
         #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
-        for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67"]:
+        for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67","192.168.253.135"]:
             #linux_r_ip = '192.168.238.7'
             sshClient_r = ct.sshConnect(linux_r_ip, self.port, self.username, self.password)
             #linux_remote = '/home/trade/ExchFile/sjs_fie/'
