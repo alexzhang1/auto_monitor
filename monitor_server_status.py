@@ -364,7 +364,7 @@ class MonitorServer:
                 pres = []
             else:
                 pres = list(res.decode('gbk').split('\n'))
-                logger.debug("pres:",pres)
+                logger.debug("pres:" + pres)
             try:
                 loss = pres[8].split('(')[1].split('%')[0] + "%"  # 获取丢包率
             except IndexError:
@@ -388,7 +388,7 @@ class MonitorServer:
                 pres = []
             else:
                 pres = list(res.decode('gbk').split('\n'))
-                logger.debug("pres:",pres)
+                logger.debug("pres:" + pres)
             try:
                 #tem = "4 packets transmitted, 0 received, 100% packet loss, time 611ms"
                 loss = pres[3].split()[5]  # 获取丢包率

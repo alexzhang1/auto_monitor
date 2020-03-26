@@ -25,7 +25,7 @@ logger = logging.getLogger()
 
 
 
-class SPTraderSpi(traderapi.CTORATstpTraderSpi):
+class TraderSpi(traderapi.CTORATstpTraderSpi):
     def __init__(self,api,app):
         traderapi.CTORATstpTraderSpi.__init__(self)
         self.__api=api
@@ -329,7 +329,7 @@ class TestApp(threading.Thread):
 #            if self.__api is None:
         print(traderapi.CTORATstpTraderApi_GetApiVersion())
         self.__api = traderapi.CTORATstpTraderApi.CreateTstpTraderApi()
-        self.__spi = SPTraderSpi(self.__api, self)
+        self.__spi = TraderSpi(self.__api, self)
         self.__api.RegisterSpi(self.__spi)
         self.__api.RegisterFront(self.__address)
         #订阅私有流
