@@ -8,6 +8,8 @@ Created on Wed May 29 09:07:10 2019
 import pymssql
 import datetime as dt
 import logging
+import pandas as pd
+import numpy as np
 
 logger = logging.getLogger('main.mssql_tools')
 
@@ -105,3 +107,23 @@ def get_db_data(sql, db_info):
         print(e)
     #conn.close()
     return res,title
+
+
+#return pandas
+def get_db_df(sql, db_info):
+    (cursor, conn) = connect_mssql(db_info)
+    try:
+        print(sql)
+        cursor.execute(sql)
+        res = cursor.fetchall()
+        des = cursor.description
+        print('...execute successfull!')
+    except Exception as e:
+        conn.rollback()
+        print('...have problem, already rollback!')
+        print(e)
+    conn.close()
+    
+    db_columns = list(zip(*des))[0]
+    db_df = pd.DataFrame(list(res), columns=db_columns)
+    return db_df

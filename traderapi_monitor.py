@@ -199,7 +199,7 @@ class TraderSpi(traderapi.CTORATstpTraderSpi):
             
         
     def auto_increase_reqid(self):
-        self.__req_id = self.__req_id + 1;
+        self.__req_id = self.__req_id + 1
 
     def test_req_user_login(self):
         logger.info("test_req_user_login...")
