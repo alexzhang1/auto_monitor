@@ -105,7 +105,7 @@ def get_db_data(sql, db_info):
         conn.rollback()
         print('...have problem, already rollback!')
         print(e)
-    #conn.close()
+    conn.close()
     return res,title
 
 
