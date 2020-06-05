@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 '''
 @File    :   get_DBdata_for_Xlight.py
@@ -44,11 +44,11 @@ def process_boardOrder(info):
         mssql_dl_db = info["mssql_dl_db"]
         mssql_up_db = info["mssql_up_db"]
         mssql_dbname = info["mssql_dbname"]
-        mysql_db_ip = info["mysql_db_ip"]
-        mysql_user = info["mysql_user"]
-        mysql_passwd = info["mysql_passwd"]
-        mysql_dbname = info["mysql_dbname"]
-        mysql_port = info["mysql_port"]
+        # mysql_db_ip = info["mysql_db_ip"]
+        # mysql_user = info["mysql_user"]
+        # mysql_passwd = info["mysql_passwd"]
+        # mysql_dbname = info["mysql_dbname"]
+        # mysql_port = info["mysql_port"]
 
         csv_file_name = './DBdata/BoardOrder/' + ndates +'_BoardOrder_df.csv'
         #先连接upload库查询修改成功的订单
@@ -63,7 +63,6 @@ def process_boardOrder(info):
             result_df = pd.DataFrame(columns=['TradingDay','OrderLocalID','OrderSysID','Direction','Price',\
                     'VolumeTotalOriginal','VolumeTraded','SecurityID','ExchangeID','InvestorID','SInfo',\
                     'InvestorName','SecurityName','ShortSecurityName','ExchangeName','DBname'])
-            #1|110010100000003|40750|0100000003|356000012906|5|
             for item in content_res:
                 logger.info(item[0])
                 cont_list = item[0].split('|')
@@ -103,19 +102,25 @@ def process_boardOrder(info):
             logger.info("t_EQCommand没有MdbErrCode等于0的数据!")
         #导入到mysql数据库
         if not os.path.isfile(csv_file_name):           
-            logger.info("当天没有BoardOrder订单文件生成")
+            logger.error("当天没有BoardOrder订单文件生成")
         else:
             logger.info("导入mysql....")
-            # mysqldb_info = [mysql_db_ip, mysql_user, mysql_passwd,mysql_dbname, mysql_port]
-            # mysql_obj = myc.mysql_tools(mysqldb_info)
-            # file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'test_board_order')
-            # logger.info(file_sql)
-            # mysql_obj.execute_sql(file_sql)
-               
+            info = ct.get_server_config('./config/mysql_config.txt')
+            mysql_db_ip = info[0][0]
+            mysql_user = info[0][1]
+            mysql_passwd = info[0][2]
+            mysql_dbname = info[0][3]
+            mysql_port = int(info[0][4])
+            mysqldb_info = [mysql_db_ip, mysql_user, mysql_passwd,mysql_dbname, mysql_port]
+            mysql_obj = myc.mysql_tools(mysqldb_info)
+            file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'fireball_board_order')
+            logger.info(file_sql)
+            mysql_obj.execute_sql(file_sql)
+            logger.info("导入mysql完成")               
     except Exception:
         msg = '处理boardOrder数据出现异常'
         logger.error(msg, exc_info=True)
-        #ct.send_sms_control('NoLimit', msg)
+        ct.send_sms_control('NoLimit', msg, '13681919346')
     finally:
         pass
 

@@ -263,40 +263,20 @@ def xwdm_monitor_task():
 
         linuxInfo = ct.get_server_config('./config/check_xwdm_config.txt')
         
-        check_flag = 0
         for info in linuxInfo: 
             try:
+                check_flag = 0
                 hostip = info[0]
-                xwdm_check_col = info[6]
                 c_x = cx.check_csv_file(info)
                 error_list = c_x.check_xwdm()
-                print("error_list:", error_list)
-                temp_list = []
-                for item in error_list:
-                    temp_list.append('::'.join(item))
-                
-                if len(error_list) == 0:
-                    logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
-                    check_flag += 1
+                check_flag = (sum(error_list)==len(error_list))
+                if check_flag:
+                    logger.info(u"ok:系统 %s 席位代码文件检查成功！" % hostip)
                 else:
-                    if error_list == [['999','999']]:
-                        msg = "Error:查询系统 %s席位代码失败，csv文件不存在" % hostip
-                        logger.error(msg)
-                        ct.send_sms_control('xwdm', msg)
-                    else:
-                        logger.error(u"Error:检查失败，有客户席位代码不在奇点系统配置内")
-                        list_str = ';'.join(temp_list)
-                        msg = "Error:系统 %s 检查节点 %s 失败的客户：%s" % (hostip, xwdm_check_col, list_str)
-                        logger.error(msg)
-                        ct.send_sms_control('xwdm', msg)
+                    logger.error(u"系统 %s 检查席位代码文件失败!" % hostip)
             except Exception:
                 logger.error("查询席位代码失败，出现异常，请查看服务器日志信息！", exc_info=True)
                 ct.send_sms_control('xwdm', "Error:查询席位代码失败，出现异常，请查看服务器日志信息！")
-
-        if check_flag != 0 and check_flag == len(linuxInfo):
-            logger.info(u"OK:检查客户席位代码成功!")
-        else:
-            logger.warning(u"Error:检查客户席位代码失败!")
 
 
 '''
@@ -346,7 +326,8 @@ def follow_monitor_task():
                     msg = "ok:系统 %s 跟投费率优惠文件检查成功，文件名[%s]" % (hostip,res_file)
                     logger.info(msg)
                     check_flag += 1
-                    ct.send_sms_control('NoLimit', msg)
+                    #20200526正常状态不再发短信
+                    #ct.send_sms_control('NoLimit', msg)
                 else:
                     msg = "Error:系统 %s 跟投费率优惠文件检查失败 失败的原因：%s" % (hostip, res_file[6:])
                     logger.error(msg)
@@ -464,6 +445,40 @@ def backup_db_monitor_task():
         else:
             logger.info("OK:所有数据库备份检查正常")
 
+'''
+#压缩数据库log文件，并检查大小
+'''
+def shrink_dblog_monitor_task():
+    
+    with open('./config/table_check.json', 'r') as f:
+        Jsonlist = json.load(f)
+        logger.debug(Jsonlist)
+    
+        thrlist = range(len(Jsonlist))
+        threads=[]
+        for (i,info) in zip(thrlist, Jsonlist):
+            #print("alltask.__name__:", alltask.__name__)
+            t = dbm.MyThread(dbm.shrink_dblog_monitor,(info,),dbm.shrink_dblog_monitor.__name__ + str(i))
+            threads.append(t)
+            
+        for i in thrlist:
+            threads[i].start()
+        check_list = []
+        for i in thrlist:       
+            threads[i].join()
+            threadResult = threads[i].get_result()
+            if (not threadResult) :
+                check_list.append(0)
+            else:
+                check_list.append(1)
+        check_flag = (sum(check_list)==len(check_list))
+        if (not check_flag) :
+            logger.error("error:有数据库日志压缩检查处理失败，请检查详细错误信息")
+            logger.error(check_list)
+            ct.send_sms_control("NoLimit", "error:有数据库日志压缩检查失败，请检查详细错误信息")
+        else:
+            logger.info("OK:所有数据库日志压缩检查正常")
+
 
 #自己日志监控
 def self_log_monitor_task(log_file):
@@ -567,7 +582,7 @@ def ssh_remote_command_task():
             logger.info("sshRes:")
             logger.info(sshRes)
         
-        sshClient.close()
+            sshClient.close()
                 
     if len(error_list) != 0:
         temstr = ';'.join(error_list)
@@ -651,12 +666,13 @@ def main(argv):
                     task="ssh_connect" means ssh connect monitor  \n \
                     task="ssh_excute" means ssh connect monitor  \n \
                     task="bkdb" means backup db monitor  \n \
+                    task="clean_dblog" means shrink db log  \n \
                     task="exch_file" means exhcnage file monitor  \n \
                     task="sjdr" means sjdr folder Order file monitor  ' )            
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","bkdb","self_monitor","ssh_connect","ssh_excute","exch_file"]:
+            if manual_task not in ["ps","mem","ping","disk","core","xwdm","aft_cleanup","bef_cleanup","sjdr","follow","bkdb","clean_dblog","self_monitor","ssh_connect","ssh_excute","exch_file"]:
                 logger.info("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -704,6 +720,9 @@ def main(argv):
         elif manual_task == 'bkdb':
             logger.info("Start to excute the backup db monitor")
             backup_db_monitor_task()
+        elif manual_task == 'clean_dblog':
+            logger.info("Start to excute the shrink db log monitor")
+            shrink_dblog_monitor_task()
         elif manual_task == 'exch_file':
             logger.info("Start to excute the exchange file monitor")
             exchange_file_monitor_task()

@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import threading
+import platform
 
 
 
@@ -23,16 +24,26 @@ class mysql_tools:
         self.db_name = db_info[3]
         self.port = db_info[4]
 
-        self.conn = pymysql.connect(host = self.host, \
-                            user = self.user, \
-                            passwd = self.passwd, \
-                            port = self.port, \
-    #                         db = "test_db", \
-                            local_infile=1)
-        self.conn.set_charset('UTF8MB4')  
+
+        try:
+	    #     self.conn = pymysql.connect(host = self.host, \
+	    #                         user = self.user, \
+	    #                         passwd = self.passwd, \
+	    #                         port = self.port, \
+	    # #                         db = "test_db", \
+	    #                         local_infile=1)
+	        self.conn = pymysql.connect(host = self.host, \
+	                            user = self.user, \
+	                            passwd = self.passwd, \
+	                            port = self.port,\
+                                local_infile=1)
+        except Exception as e:
+            print('connect exception!')
+            print(str(e))
+        self.conn.set_charset('utf8mb4')  
         self.cursor = self.conn.cursor()
-        self.cursor.execute('SET NAMES utf8;')  
-        self.cursor.execute('SET character_set_connection=utf8;')  
+        self.cursor.execute('SET NAMES utf8mb4;')  
+        self.cursor.execute('SET character_set_connection=utf8mb4;')  
         #return (cursor,conn)
 
 
@@ -40,6 +51,7 @@ class mysql_tools:
         #(cursor,conn) = self.connect_mysql()
         try:
             print(sql)
+            #print("self.cconn:",self.conn)
             self.cursor.execute(sql)
             self.conn.commit()
             print('...execute successfull!')
@@ -79,17 +91,32 @@ class mysql_tools:
     def load_table_commend_gen(self, csv_file_name, tb_name):
         template_file = './table_template/' + tb_name + '.csv'
         temp = pd.read_csv(template_file, index_col=None)
-        temp_data = pd.read_csv(csv_file_name)
-        temp_data.fillna(-999, inplace=True)
+        #加上dtype=object不会将字符前面的00去掉了
+        temp_data = pd.read_csv(csv_file_name,dtype=object)
+        #temp_data.fillna(-999, inplace=True)
         temp_data = temp_data[temp.var_name]
-        temp_data.to_csv('temp.csv', index=False, encoding='utf-8')
+        temp_file = './table_template/' + tb_name + '_temp.csv'
+        temp_data.to_csv(temp_file, index=False, encoding='utf-8')
         print(temp_data)
-        commend =   "LOAD DATA LOW_PRIORITY LOCAL INFILE 'temp.csv' " + \
-                    "REPLACE INTO TABLE " + self.db_name + '.' +  tb_name + \
-                    """ CHARACTER SET utf8 
-                    FIELDS TERMINATED BY \',\' 
-                    LINES TERMINATED BY '\r\n' 
-                    IGNORE 1 LINES;"""
+        # Note: Windows下换行符为'\r\n'，Linux系统下换行符为'\n',Mac系统里，每行结尾是“<回车>”,即'\r'
+        sysstr = platform.system()
+        if sysstr == "Windows":
+            commend =   "LOAD DATA LOW_PRIORITY LOCAL INFILE '" + temp_file + "' " + \
+                        "REPLACE INTO TABLE " + self.db_name + '.' +  tb_name + \
+                        """ CHARACTER SET utf8mb4 
+                        FIELDS TERMINATED BY \',\' 
+                        LINES TERMINATED BY '\r\n' 
+                        IGNORE 1 LINES;"""
+        #Linux换行'\n',暂时不考虑Mac系统
+        else:
+            #commend =   "LOAD DATA LOW_PRIORITY LOCAL INFILE 'temp.csv' " + \
+            commend =   "LOAD DATA LOW_PRIORITY LOCAL INFILE '" + temp_file + "' " + \
+                        "REPLACE INTO TABLE " + self.db_name + '.' +  tb_name + \
+                        """ CHARACTER SET utf8mb4 
+                        FIELDS TERMINATED BY \',\' 
+                        LINES TERMINATED BY '\n' 
+                        IGNORE 1 LINES;"""
+
         return commend
         
         

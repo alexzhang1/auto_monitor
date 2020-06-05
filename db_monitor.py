@@ -407,8 +407,8 @@ def check_records_value(info, cursor, conn):
             else:
                 for item in res:
                     res_list.append(item)
-                logger.debug("res_list:")
-                logger.debug(res_list)
+                logger.info("res_list:")
+                logger.info(res_list)
                 find_flag=[]
                 for csvl in csvlist[1:]:
                     for resl in res_list[1:]:
@@ -944,6 +944,62 @@ def backup_db_monitor(info):
         check_flag = False
     finally:
         conn.close()
+        return check_flag
+
+'''
+20200521:数据库日志文件检查和压缩,暂时只检查文件大小，不进行自动压缩。
+'''
+def shrink_dblog_monitor(info):
+    
+    try:               
+        server = info["serverip"]
+        user = info["user"]
+        password = info["password"]
+        admin_passwd = info["admin_passwd"]
+        admin_passwd = "adminadmin\$8"
+        dl_dbname = info["dbname"]
+        upload_dbname = info["upload_dbname"] 
+        # db_back_local = info["db_back_local"]
+        # db_back_remote = info["db_back_remote"]
+        # sshuser = info['sshuser']
+        # sshpw = info['sshpw']
+        check_flag_list = []
+        for dbname in [dl_dbname,upload_dbname]:        
+            db_info = [server, user, password, dbname]
+            log_file = dbname + '_log'
+
+            size_sql ='''select convert(float,size) * (8192.0/1024.0)/1024 from %s.dbo.sysfiles where name = '%s'; ''' % (dbname, log_file)
+            logger.info("size_sql:" + size_sql)
+
+            # shrink_sql = '''use download;
+            #                 dbcc ShrinkFile (download_log,1024, truncateonly) with NO_INFOMSGS;'''
+            #shrink_sql = '''dbcc ShrinkFile (N'%s',1024, truncateonly);''' % (log_file)
+            content_res,title = mt.get_db_data(size_sql, db_info)
+            file_size = float(content_res[0][0])
+            logger.info("content_res:" + str(content_res))
+            print(file_size)
+            # logger.info("shrink_sql:" + shrink_sql)
+            # res,des = mt.fetchall_sql(db_info,shrink_sql)
+            #res = mt.execute_sql(db_info,shrink_sql)
+            # print("res:", res)
+            #print("des:", des)
+
+            if file_size > 1024:    
+                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%f MB,请手工压缩文件" % (server, dbname, log_file, file_size)
+                logger.error(msg)
+                ct.send_sms_control("NoLimit", msg)
+                check_flag_list.append(0)
+            else:
+                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%f MB" % (server, dbname, log_file, file_size)
+                logger.info(msg)
+                #ct.send_sms_control("NoLimit", msg)
+                check_flag_list.append(1)
+
+        check_flag = (sum(check_flag_list)==len(check_flag_list))
+    except Exception:
+        logger.error('Faild to check dblog file!', exc_info=True)
+        check_flag = False
+    finally:
         return check_flag
 
 

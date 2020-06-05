@@ -240,82 +240,83 @@ class remote_file_check:
     '''
     def check_exchange_file(self):
 
-        #1，复制windows文件到linux服务器1
-        last_workday_i = ct.getLastWorkDay()
-        last_workday = last_workday_i.replace('-','')
-        file_date_str = last_workday[-4:]
-        logger.info("last_workday:" + last_workday)
-        winserver = self.follow_hostip
-        admin_passwd = self.follow_password
-        admin_passwd = "adminadmin\$8"
-        sjs_file_dir = "/home/trade/ExchFile/sjs_file/"
-        copy_file_name = "SJSGB" + file_date_str + ".DBF"
-        new_file_name = "SJSGB" + self.local_date[-4:] + ".DBF"
-        #print(new_file_name)
-        win_file_local_path = "/D:/tora/back_cmd/sjs_file/" + copy_file_name 
-        sjs_back_remote_path = sjs_file_dir + new_file_name
-        command = '%sscp_task.sh %s %s %s %s %s' % (sjs_file_dir,winserver,'administrator',admin_passwd,win_file_local_path,
-                    sjs_back_remote_path)
-        logger.info("cp_file_Command:" + command)
-        #本地执行
-        #com_res = os.system(command)
-        try:
-            ret = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
-            com_res = ret.returncode
-            logger.info("com_res:" + str(com_res))
-            logger.info("ret.stdout:")
-            logger.info(ret.stdout)
-            logger.info("ret.stderr:")
-            logger.info(ret.stderr)
-        except Exception as e:
-            msg = "复制文件异常：" + str(e)
-            com_res = 256
-            logger.error(msg)
-        #检查文件是否在
-        command_check = "ls " + sjs_back_remote_path
-        logger.info("command_check:" + command_check)
-        check_res = subprocess.run(command_check,shell=True,stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
-        logger.info("check_copy_file:")
-        logger.info(check_res.stdout)
-        #如果执行失败的话，再执行一次。
-        if com_res != 0 or check_res.stdout=='':
-            logger.info("Failed:从服务器[%s]复制文件[%s]第一次失败" % (winserver,win_file_local_path))
-            ret2 = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
-            com_res2 = ret2.stdout
-            logger.info("第二次执行结果com_res2: " + str(com_res2))
-        else:
-            logger.info("Ok:从服务器[%s]复制文件[%s]成功" % (winserver,win_file_local_path)) 
+        #20200515,取消复制和检查SJSGB文件
+    #     #1，复制windows文件到linux服务器1
+    #     last_workday_i = ct.getLastWorkDay()
+    #     last_workday = last_workday_i.replace('-','')
+    #     file_date_str = last_workday[-4:]
+    #     logger.info("last_workday:" + last_workday)
+    #     winserver = self.follow_hostip
+    #     admin_passwd = self.follow_password
+    #     admin_passwd = "adminadmin\$8"
+    #     sjs_file_dir = "/home/trade/ExchFile/sjs_file/"
+    #     copy_file_name = "SJSGB" + file_date_str + ".DBF"
+    #     new_file_name = "SJSGB" + self.local_date[-4:] + ".DBF"
+    #     #print(new_file_name)
+    #     win_file_local_path = "/D:/tora/back_cmd/sjs_file/" + copy_file_name 
+    #     sjs_back_remote_path = sjs_file_dir + new_file_name
+    #     command = '%sscp_task.sh %s %s %s %s %s' % (sjs_file_dir,winserver,'administrator',admin_passwd,win_file_local_path,
+    #                 sjs_back_remote_path)
+    #     logger.info("cp_file_Command:" + command)
+    #     #本地执行
+    #     #com_res = os.system(command)
+    #     try:
+    #         ret = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
+    #                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+    #         com_res = ret.returncode
+    #         logger.info("com_res:" + str(com_res))
+    #         logger.info("ret.stdout:")
+    #         logger.info(ret.stdout)
+    #         logger.info("ret.stderr:")
+    #         logger.info(ret.stderr)
+    #     except Exception as e:
+    #         msg = "复制文件异常：" + str(e)
+    #         com_res = 256
+    #         logger.error(msg)
+    #     #检查文件是否在
+    #     command_check = "ls " + sjs_back_remote_path
+    #     logger.info("command_check:" + command_check)
+    #     check_res = subprocess.run(command_check,shell=True,stdin=subprocess.PIPE,
+    #             stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+    #     logger.info("check_copy_file:")
+    #     logger.info(check_res.stdout)
+    #     #如果执行失败的话，再执行一次。
+    #     if com_res != 0 or check_res.stdout=='':
+    #         logger.info("Failed:从服务器[%s]复制文件[%s]第一次失败" % (winserver,win_file_local_path))
+    #         ret2 = subprocess.run(command,shell=True,stdin=subprocess.PIPE,
+    #             stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=10,check=False)
+    #         com_res2 = ret2.stdout
+    #         logger.info("第二次执行结果com_res2: " + str(com_res2))
+    #     else:
+    #         logger.info("Ok:从服务器[%s]复制文件[%s]成功" % (winserver,win_file_local_path)) 
 
 
-        #从linux1复制scp到linux2,linux3，要先做scp免密认证，从目的IP到本地7的免密验证。
-        #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
-        for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67","192.168.253.135"]:
-            #linux_r_ip = '192.168.238.7'
-            sshClient_r = ct.sshConnect(linux_r_ip, self.port, self.username, self.password)
-            #linux_remote = '/home/trade/ExchFile/sjs_fie/'
-            command_linux_r = "scp " + self.username + "@" + self.hostip + ":" + sjs_back_remote_path + " " + sjs_back_remote_path
-            logger.info(command_linux_r)
-            sshRes = ct.sshExecCmd(sshClient_r, command_linux_r)
-    #        print("sshRes:",sshRes)
-            #ct.sshClose(sshClient_r)
-            #等待2s防止文件没有上传成功
-            time.sleep(2)
-            #匹配文件，并校验文件内容是否有重复的记录
-            #command2 = "ls " + self.remote_dir + self.next_date + "*"
-            command2 = "ls " + sjs_back_remote_path
-            logger.info(command2)
-            sshRes2 = ct.sshExecCmd(sshClient_r, command2)
-            ct.sshClose(sshClient_r)
+    #     #从linux1复制scp到linux2,linux3，要先做scp免密认证，从目的IP到本地7的免密验证。
+    #     #scp trade@192.168.238.7:/home/trade/csvfiles/FollowSecurity_YYYYMMDD.csv /home/trade/run/timaker_hx/follow
+    #     for linux_r_ip in ["10.188.80.16","192.168.253.197","10.188.80.67","192.168.253.135"]:
+    #         #linux_r_ip = '192.168.238.7'
+    #         sshClient_r = ct.sshConnect(linux_r_ip, self.port, self.username, self.password)
+    #         #linux_remote = '/home/trade/ExchFile/sjs_fie/'
+    #         command_linux_r = "scp " + self.username + "@" + self.hostip + ":" + sjs_back_remote_path + " " + sjs_back_remote_path
+    #         logger.info(command_linux_r)
+    #         sshRes = ct.sshExecCmd(sshClient_r, command_linux_r)
+    # #        print("sshRes:",sshRes)
+    #         #ct.sshClose(sshClient_r)
+    #         #等待2s防止文件没有上传成功
+    #         time.sleep(2)
+    #         #匹配文件，并校验文件内容是否有重复的记录
+    #         #command2 = "ls " + self.remote_dir + self.next_date + "*"
+    #         command2 = "ls " + sjs_back_remote_path
+    #         logger.info(command2)
+    #         sshRes2 = ct.sshExecCmd(sshClient_r, command2)
+    #         ct.sshClose(sshClient_r)
 
-            if len(sshRes2)==0 :
-                msg = "服务器[%s],文件[%s]没有匹配到，复制失败！" % (linux_r_ip, new_file_name)
-                logger.error(msg)
-                ct.send_sms_control('NoLimit',msg)
-            else:
-                logger.info("服务器[%s],文件[%s]匹配到，复制成功！" % (linux_r_ip, new_file_name))
+    #         if len(sshRes2)==0 :
+    #             msg = "服务器[%s],文件[%s]没有匹配到，复制失败！" % (linux_r_ip, new_file_name)
+    #             logger.error(msg)
+    #             ct.send_sms_control('NoLimit',msg)
+    #         else:
+    #             logger.info("服务器[%s],文件[%s]匹配到，复制成功！" % (linux_r_ip, new_file_name))
         
         #2，检查交易所基础文件是否存在，比对文件大小是否为0
         sse_file_dir = "/home/trade/ExchFile/sse/"
@@ -332,7 +333,9 @@ class remote_file_check:
         Mdd = hex(int(self.local_date[-4:-2]))[-1] + self.local_date[-2:]
         new_sse_file_name=[]
         new_szse_file_name=[]
-        check_file_list = [sjs_back_remote_path]
+        #20200515,取消复制和检查SJSGB文件
+        #check_file_list = [sjs_back_remote_path]
+        check_file_list = []
 
         for file_name in sse_file:
             cc = file_name.replace("{mmdd}",mmdd).replace("{Mdd}",Mdd).replace("{tradeday}",tradeday)

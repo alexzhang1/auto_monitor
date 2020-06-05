@@ -14,6 +14,7 @@ import csv
 #import getopt
 import logging
 import common_tools as ct
+import os
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 
@@ -83,9 +84,39 @@ class check_csv_file:
         xwdm检查,取配置文件config/check_xwdm_config.txt'的字段xwdm_check_col的值选择比较的字段，
         所有的xwdm字段配置在'./config/xwdm_check_list.csv'中，根据上面的字段匹配对应的列，和数据库验证对比。
         不在奇点系统里的客户记录，打印出来。
+        20200604:修改检查方式：只检查2个文件是否存在
+        /home/trade/trade_share/20200604/VIP_INTERFACE_OK20200604.csv
+        /home/trade/trade_share/20200604/4/VIP_OK20200604.csv
     '''
-    
+
     def check_xwdm(self):
+        
+        ndate = self.local_date.replace('-','')
+        vip_interface_filepath = self.remote_dir + '/' + ndate +'/VIP_INTERFACE_OK' + ndate + '.csv'
+        vip_ok_filepath = self.remote_dir + '/' + ndate +'/4/VIP_OK' + ndate + '.csv'
+        error_kh_list=[]
+
+        for filepath in [vip_interface_filepath, vip_ok_filepath]:
+            command = "ls " + filepath
+            logger.info("command:" + command)
+            sshRes = []
+            sshRes = self.sshExecCmd(command)
+            # print("sshRes:", sshRes)
+            # print(sshRes[0] == filepath)
+            # print(sshRes == [''])
+            if sshRes !=['']:
+                logger.info("服务器%s: 文件：%s存在" % (self.hostip, filepath)) 
+                error_kh_list.append(1)  
+            else:
+                msg = "服务器%s: 文件：%s不存在！" % (self.hostip, filepath)
+                logger.error(msg) 
+                ct.send_sms_control('xwdm', msg)
+                error_kh_list.append(0) 
+        self.sshClient.close()
+        
+        return error_kh_list
+
+    def check_xwdm_old(self):
         
         xwdm_file='./config/xwdm_check_list.csv'
 #        self.xwdm_check_col='XWDM_sz'
@@ -143,23 +174,17 @@ def main(argv):
         ct.setup_logging(yaml_path)
         linuxInfo = ct.get_server_config('./config/check_xwdm_config.txt')
         
-        check_flag = 0
+        
         for info in linuxInfo: 
+            check_flag = 0
             hostip = info[0]
-            xwdm_check_col = info[6]
             c_x = check_csv_file(info)
             error_list = c_x.check_xwdm()
-            if len(error_list) == 0:
-                logger.info(u"ok:系统 %s 检查成功，客户席位代码都在奇点系统配置内" % hostip)
-                check_flag += 1
+            check_flag = (sum(error_list)==len(error_list))
+            if check_flag:
+                logger.info(u"ok:系统 %s 席位代码文件检查成功！" % hostip)
             else:
-                logger.warning(u"error:检查失败，有客户席位代码不在奇点系统配置内")
-                logger.error(u"系统 %s 检查节点 %s 失败的客户如下：" % (hostip, xwdm_check_col))
-                logger.info(error_list)
-        if check_flag == len(linuxInfo):
-            logger.info(u"OK:检查客户席位代码成功!")
-        else:
-            logger.error(u"Error:检查客户席位代码失败!")
+                logger.error(u"系统 %s 检查席位代码文件失败：" % hostip)
     except Exception:
         logger.error('Faild to check xwdm!', exc_info=True)
     finally:

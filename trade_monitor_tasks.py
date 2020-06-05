@@ -361,7 +361,7 @@ def main(argv):
             ct.sms_switch(0)
         elif manual_task == 'sms100':
             logger.info("打开发送短信功能")
-            ct.sms_switch(100)
+            ct.sms_switch(200)
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
             print("Input python trade_monitor_tasks.py -h for help")
