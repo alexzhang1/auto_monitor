@@ -77,8 +77,9 @@ def countrtt(path,TradingDay_Order,x=None,y=None,start=None,end=None,lower=0.1,u
     msm_str_sub = ''
     csv_df_sub = pd.DataFrame(columns=['TradingDay','NodeID','ExchangeKernel','count','mean','std','min','50%','90%','99%','max'])
     for col_name in y:
-
+        
         desc_df = df.describe(percentiles=[0.5, 0.90, 0.99])
+        print("desc_df:",desc_df)
         desc_df[col_name] = desc_df[col_name].map(lambda x: round(float(x),2))
         rtt_df = desc_df[col_name].to_frame()
         db_df = pd.DataFrame(rtt_df.values.T,columns=rtt_df.index)
@@ -90,16 +91,20 @@ def countrtt(path,TradingDay_Order,x=None,y=None,start=None,end=None,lower=0.1,u
             exch_ker_name = path.split('/')[-1][:-14] + 'rtt'
         db_df.insert(2,'ExchangeKernel',exch_ker_name)
         tem_dict = desc_df.to_dict()
-        msm_str = '[rtt_' + path.split('/')[-2] + '_' + exch_ker_name + ':] count:' \
-                + str(tem_dict[col_name]['count']) + ' mean:' + str(tem_dict[col_name]['mean'])\
-                + ' std:' + str(tem_dict[col_name]['std']) + ';'
+        if df.empty:
+            logger.info("df is empty!")
+            msm_str = '[rtt_' + path.split('/')[-2] + '_' + exch_ker_name + ':] count: 0 mean: 0 std: 0;'
+        else:
+            msm_str = '[rtt_' + path.split('/')[-2] + '_' + exch_ker_name + ':] count:' \
+                    + str(tem_dict[col_name]['count']) + ' mean:' + str(tem_dict[col_name]['mean'])\
+                    + ' std:' + str(tem_dict[col_name]['std']) + ';'
         logger.info("msm_str:" + msm_str)
         msm_str_sub += msm_str
         csv_df_sub = pd.concat([csv_df_sub, db_df], ignore_index=True)
-    #20200515有了数据库文件，暂时不需要之前的落地文件
-    # with open(result_file, 'a+') as f:
-    #     f.write(rtt_str)
-    #     f.write('\n')
+        #20200515有了数据库文件，暂时不需要之前的落地文件
+        # with open(result_file, 'a+') as f:
+        #     f.write(rtt_str)
+        #     f.write('\n')
     return df, msm_str_sub, csv_df_sub
 
 
@@ -107,7 +112,10 @@ def draw_scatter(df,x,y,dot_size,pic=None):
     if not dot_size:
         dot_size = 10
     rec_num = len(df)
-    point_size = format( float(dot_size)*100 / float(rec_num), '.5f')
+    if rec_num !=0 :
+        point_size = format( float(dot_size)*100 / float(rec_num), '.5f')
+    else:
+        return
 
     if x:
         df[[x,y]].plot.scatter(x=x,y=y,s=float(point_size))
@@ -197,12 +205,13 @@ def rtt_run(Kfile_dir):
     csv_df = pd.DataFrame(columns=['TradingDay','NodeID','ExchangeKernel','count','mean','std','min','percent50','percent90','percent99','max'])
     #获得交易日期，取第一个目录（2号节点）的SSEOrder文件解析TradaingDay
     try:
-        order_df = pd.read_csv(Kfile_dir[0] + '/SSEOrder.csv', nrows=2, dtype=object)
+        order_df = pd.read_csv(Kfile_dir[2] + '/SSEOrder.csv', nrows=2, dtype=object)
         TradingDay_Order = (order_df['TradingDay'][1])
     except Exception as e:
-        logger.error("没有取到交易日期！")
-        print(str(e))
-        TradingDay_Order = ndates
+        # logger.error("没有取到交易日期！")
+        # print(str(e))
+        logger.error("没有取到交易日期！", exc_info=True)
+        TradingDay_Order = ndates.replace('-','')
     for f_dir in Kfile_dir:
         for k_file in kernel_file:
             dirname = f_dir.split('/')[-1]

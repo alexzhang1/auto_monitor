@@ -12,6 +12,9 @@ import numpy as np
 import datetime as dt
 import threading
 import platform
+import logging
+
+logger = logging.getLogger('main.mysql_tools_class')
 
 
 
@@ -57,8 +60,9 @@ class mysql_tools:
             print('...execute successfull!')
         except Exception as e:
             self.conn.rollback()
-            print('...have problem, already rollback!')
-            print(e)
+            # print('...have problem, already rollback!')
+            # print(e)
+            logger.error('...have problem, already rollback!', exc_info=True)
         self.conn.close()
 
 
@@ -71,8 +75,9 @@ class mysql_tools:
             print('...execute successfull!')
         except Exception as e:
             self.conn.rollback()
-            print('...have problem, already rollback!')
-            print(e)
+            # print('...have problem, already rollback!')
+            # print(e)
+            logger.error('...have problem, already rollback!', exc_info=True)
         self.conn.close()
         return res
 
@@ -158,13 +163,25 @@ class mysql_tools:
             print('...execute successfull!')
         except Exception as e:
             self.conn.rollback()
-            print('...have problem, already rollback!')
-            print(e)
+            # print('...have problem, already rollback!')
+            # print(e)
+            logger.error('...have problem, already rollback!', exc_info=True)
         #conn.close()
         
         db_columns = list(zip(*des))[0]
         db_df = pd.DataFrame(list(res), columns=db_columns)
         return db_df
+
+    #检查mysql数据库的local_infile参数
+    def get_local_infile_value(self):
+        local_para_sql = "show global variables like 'local_infile';"
+        #logger.info(file_sql)
+        db_df = self.get_db_df(local_para_sql)
+        print("db_df:",db_df)
+        print("local_infile[value]:",db_df['Value'][0])
+        local_file_msg = "local_infile 的值为 %s" % db_df['Value'][0]
+        logger.info(local_file_msg)
+        return db_df['Value'][0]
 
     def ms_close(self):
         self.conn.close()

@@ -62,16 +62,20 @@ class remote_file_check:
     '''
     def check_sdjr(self):
         
-        node_list = [2,3,4,5]
+        #20200714，修改检查文件列表，最终只检查一个文件{ndate}_end.txt
+        #node_list = [2,3,4,5]
         check_file_list = []
         error_file_list = []
         ndate = self.local_date.replace('-','')
-        for node in node_list:
-            check_file_list.append(ndate + "_" + str(node) + "_end.txt")
-            check_file_list.append("t_Order" + str(node) + ".csv")
-            check_file_list.append("t_Order" + str(node) + ".dbf")
+        #20200714
+        # for node in node_list:
+        #     check_file_list.append(ndate + "_" + str(node) + "_end.txt")
+        #     check_file_list.append("t_Order" + str(node) + ".csv")
+        #     check_file_list.append("t_Order" + str(node) + ".dbf")
+        check_file_list.append(ndate + "_end.txt")
 
         sftp = self.sshClient.open_sftp()
+        
         #先检查end file是否存在
         for file in check_file_list:
             file_path = self.remote_dir + "/" + file

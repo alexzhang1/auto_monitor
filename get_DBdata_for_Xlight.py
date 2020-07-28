@@ -113,10 +113,16 @@ def process_boardOrder(info):
             mysql_port = int(info[0][4])
             mysqldb_info = [mysql_db_ip, mysql_user, mysql_passwd,mysql_dbname, mysql_port]
             mysql_obj = myc.mysql_tools(mysqldb_info)
-            file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'fireball_board_order')
-            logger.info(file_sql)
-            mysql_obj.execute_sql(file_sql)
-            logger.info("导入mysql完成")               
+            local_infile_value = mysql_obj.get_local_infile_value()
+            #判断mysql参数是否打开允许导入文件
+            if local_infile_value == 'ON':
+                file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'fireball_board_order')
+                logger.info(file_sql)
+                mysql_obj.execute_sql(file_sql)
+                logger.info("导入mysql完成")     
+            else:
+                local_file_msg = "Error，mysql导入csv失败，local_infile 的值为： %s" % local_infile_value
+                ct.send_sms_control('NoLimit', local_file_msg, '13681919346')
     except Exception:
         msg = '处理boardOrder数据出现异常'
         logger.error(msg, exc_info=True)
@@ -159,8 +165,6 @@ def main(argv):
                 logger.warning("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
-    #    if inc == 0:
-        #task=["ps_port","mem","fpga","db_init","db_trade","errorLog"]
         if manual_task == 'board_order':
             logger.info("Start to excute the board_order data")
             board_order_list = Jsondict['board_order']
@@ -170,7 +174,6 @@ def main(argv):
             logger.info("Start to excute the rtt res data")
             process_rss_res()
         else:
-            # 只执行一次的任务，fpga监控，数据库资金等信息监控
             print("Input python XXXX.py -h for help")
 
     except Exception:

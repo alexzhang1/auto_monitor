@@ -391,7 +391,8 @@ def main(argv):
             ct.sms_switch(100)
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
-            fpga_task()
+            #20200728,暂停fpga监控
+            #fpga_task()
             db_init_monitor_task()
             while True:                    
                 start_time = '08:50'

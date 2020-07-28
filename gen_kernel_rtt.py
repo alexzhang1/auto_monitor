@@ -71,6 +71,8 @@ def main():
             gen_kernel_rtt(file_dir)
         logger.info("gen rtt file finished")
         csv_df = rtt_c.rtt_run(Kfile_dir)
+        csv_df.fillna(0, inplace=True)
+        #print("csv_df:",csv_df)
         #csv_df = pd.DataFrame(columns=['TradingDay','NodeID','ExchangeKernel','count','mean','std','min','percent50','percent90','percent99','max'])
         csv_file_name = './rtt_result/rtt_count_result_' + ndates + '_dbdata.csv'
         csv_df.to_csv(csv_file_name, encoding='utf-8')
@@ -88,12 +90,18 @@ def main():
             #mysqldb_info = ["192.168.238.21","test","test123","test_db", 3306]
             #
             mysql_obj = myc.mysql_tools(mysqldb_info)
-            file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'rtt_kernel_count')
-            logger.info(file_sql)
-            mysql_obj.execute_sql(file_sql)   
+            local_infile_value = mysql_obj.get_local_infile_value()
+            #判断mysql参数是否打开允许导入文件
+            if local_infile_value == 'ON':
+                file_sql = mysql_obj.load_table_commend_gen(csv_file_name, 'rtt_kernel_count')
+                logger.info(file_sql)
+                mysql_obj.execute_sql(file_sql)
+            else:
+                local_file_msg = "Error，mysql导入csv失败，local_infile 的值为： %s" % local_infile_value
+                ct.send_sms_control('NoLimit', local_file_msg, '13681919346')
         
     except Exception:
-        msg = "处理rrt_result数据出现异常"
+        msg = "处理rtt_result数据出现异常"
         logger.error(msg, exc_info=True)
         ct.send_sms_control('NoLimit', msg, '13681919346')
     finally:
