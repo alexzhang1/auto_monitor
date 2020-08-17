@@ -160,7 +160,8 @@ def main(argv):
             db_init_monitor_task()
         else:
             # 只执行一次的任务，fpga监控，数据库资金等信息监控
-            fpga_task()
+            #20200728,暂时去掉fpga监控
+            #fpga_task()
             db_init_monitor_task()
 
     except Exception:

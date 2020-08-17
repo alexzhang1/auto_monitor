@@ -82,7 +82,7 @@ def check_table_count(info, cursor, conn):
             result_count = res[0][0]
             logger.debug("result_count: %d", result_count)
             if result_count == count:
-                logger.info("Ok: Check DBserver: %s table: %s count: %d" % (serverip, tablename, result_count))
+                logger.debug("Ok: Check DBserver: %s table: %s count: %d" % (serverip, tablename, result_count))
                 #check_flag = True
                 check_list.append(1)
             else:

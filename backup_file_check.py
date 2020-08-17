@@ -47,31 +47,33 @@ class backup_file_check:
             self.local_date = dt.datetime.today().strftime('%Y-%m-%d')
             
             #获得上一交易日的日期字符串
-            self.last_WorkDay = self.getLastWorkDay()
-    #取得上一工作日的日期（周一--周五）
-    def getLastWorkDay(self, nday=dt.datetime.today()):
+            #self.last_WorkDay = self.getLastWorkDay()
+            #改成从交易日历获取交易日期
+            self.last_WorkDay = ct.get_prevTradeDate(self.local_date)
+    # #取得上一工作日的日期（周一--周五）
+    # def getLastWorkDay(self, nday=dt.datetime.today()):
         
-        nday=dt.datetime.today()
-        #星期几
-        week = int(time.strftime("%w", nday.timetuple()))
-        if week == 1:
-            interval_day = 3
-        else:
-            interval_day = 1
-        lastWorkDay = (dt.datetime.today()-dt.timedelta(interval_day)).strftime('%Y-%m-%d')
-        return lastWorkDay
+    #     nday=dt.datetime.today()
+    #     #星期几
+    #     week = int(time.strftime("%w", nday.timetuple()))
+    #     if week == 1:
+    #         interval_day = 3
+    #     else:
+    #         interval_day = 1
+    #     lastWorkDay = (dt.datetime.today()-dt.timedelta(interval_day)).strftime('%Y-%m-%d')
+    #     return lastWorkDay
     
-    #取得上2个工作日的日期（周一--周五）
-    def getLast2WorkDay(self, nday=dt.datetime.today()):
+    # #取得上2个工作日的日期（周一--周五）
+    # def getLast2WorkDay(self, nday=dt.datetime.today()):
         
-        #星期几
-        week = int(time.strftime("%w", nday.timetuple()))
-        if week == 1 or week == 2:
-            interval_day = 4
-        else:
-            interval_day = 2
-        last2WorkDay = (dt.datetime.today()-dt.timedelta(interval_day)).strftime('%Y-%m-%d')
-        return last2WorkDay
+    #     #星期几
+    #     week = int(time.strftime("%w", nday.timetuple()))
+    #     if week == 1 or week == 2:
+    #         interval_day = 4
+    #     else:
+    #         interval_day = 2
+    #     last2WorkDay = (dt.datetime.today()-dt.timedelta(interval_day)).strftime('%Y-%m-%d')
+    #     return last2WorkDay
 
 
     # ------获取远端linux主机上的文件是否是文件夹
@@ -181,7 +183,7 @@ class backup_file_check:
                     last_filepath = self.remote_dir + '/' + last_filematch
                     la_filesize = self.get_remote_filesize(sshClient, last_filepath)
                     if la_filesize:
-                        logger.debug(u"找到上一日的备份目录:", la_filesize)
+                        logger.debug(u"找到上一日的备份目录:" + str(la_filesize))
                         self.last_filesize = la_filesize
                     else:
                         msg = "error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch)
@@ -193,7 +195,7 @@ class backup_file_check:
                     last_filepath = self.remote_dir + '/' + last_filematch
                     la_filesize = self.get_remote_filesize(sshClient, last_filepath)
                     if la_filesize:
-                        logger.debug(u"找到上一日的备份目录:", la_filesize)
+                        logger.debug(u"找到上一日的备份目录:" + str(la_filesize))
                         self.last_filesize = la_filesize
                     else:
                         msg = "error: 没有找到服务器： %s 上一日的备份目录:%s" % (self.hostip, last_filematch)
@@ -227,7 +229,7 @@ class backup_file_check:
                 last_filepath = self.remote_dir_h + '/' + last_filematch
                 la_filesize = self.get_remote_filesize(sshClient, last_filepath)
                 if la_filesize:
-                    logger.debug(u"找到上一日的备份目录:", la_filesize)
+                    logger.debug(u"找到上一日的备份目录:" + str(la_filesize))
                     bs_fsz = la_filesize
                 else:
                     msg = "error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch)
@@ -238,7 +240,7 @@ class backup_file_check:
                 last_filepath = self.remote_dir_h + '/' + last_filematch
                 la_filesize = self.get_remote_filesize(sshClient, last_filepath)
                 if la_filesize:
-                    logger.debug(u"找到上一日的备份目录:", la_filesize)
+                    logger.debug(u"找到上一日的备份目录:" + str(la_filesize))
                     bs_fsz = la_filesize
                 else:
                     msg = "error: 没有找到备份服务器： %s 上一日的备份目录:%s" % (self.hostip_h, last_filematch)
@@ -265,7 +267,52 @@ class backup_file_check:
         上一交易日比较备份文件大小成功的话，删除生产服务器2个工作日之前的生成的备份数据文件。filetype == 'W'表示宛平的文件类型，处理方式不一样
     '''
     def del_before_2days_file(self):
-        Last2WorkDay = self.getLast2WorkDay()
+        #20200817，直接通过交易日历获取
+        #Last2WorkDay = self.getLast2WorkDay()
+        prevTradeDate = ct.get_prevTradeDate(self.local_date)
+        if prevTradeDate != '0000-00-00':
+            Last2WorkDay = ct.get_prevTradeDate(prevTradeDate)
+            if self.filetype == 'W':
+                #删除目录
+                t = paramiko.Transport((self.hostip, self.port))
+                t.connect(username=self.username, password=self.password)
+                sftp = paramiko.SFTPClient.from_transport(t)
+    #            filedirmatch = self.remote_dir + '/' + Last2WorkDay + "_16*"
+                dir_namematch = Last2WorkDay + "_16"    
+                logger.debug("dir_namematch:" + dir_namematch)
+                rmfiledir = self.get_match_remote_dir_name(sftp, self.remote_dir, dir_namematch)
+                logger.debug("rmfiledir:" + rmfiledir)
+                if rmfiledir == '':
+                    msg = "error:没有匹配到服务器%s 两日前的备份目录% s" % (self.hostip, (self.remote_dir + '/' + dir_namematch))
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
+                else:
+                    self.rm_remote_dir(sftp, rmfiledir)
+                    msg = "ok:删除原始备份服务器%s 备份目录: %s成功！" % (self.hostip, rmfiledir)
+                    logger.info(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
+                t.close()
+            else:
+                #删除文件
+                t = paramiko.Transport((self.hostip, self.port))
+                t.connect(username=self.username, password=self.password)
+                sftp = paramiko.SFTPClient.from_transport(t)
+                rmfilename = self.remote_dir + '/' + Last2WorkDay.replace('-','') + ".tar.gz"
+                logger.debug("rmfile:" + rmfilename)
+                try:
+                    sftp.remove(rmfilename)
+                    msg = "ok:删除原始备份服务器%s 备份文件: %s成功！" % (self.hostip, rmfilename)
+                    logger.info(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
+                except Exception as e:
+                    msg = "error:删除原始备份服务器%s 文件%s 失败,错误原因：%s" % (self.hostip, rmfilename, str(e))
+                    logger.error(msg)
+                    ct.send_sms_control('NoLimit',msg,'13162583883,13681919346')
+                t.close()
+
+        else:
+            logger.info("今天是非交易日，不删除文件。")
+
         if self.filetype == 'W':
             #删除目录
             t = paramiko.Transport((self.hostip, self.port))

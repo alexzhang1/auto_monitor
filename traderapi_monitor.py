@@ -50,7 +50,7 @@ class TraderSpi(traderapi.CTORATstpTraderSpi):
             #self.__app.wake_up()
         else:
             #20190829增加的登陆失败也退出，脚本运行时不需要等待下次登陆处理。
-            logger.warning("Error:登陆失败 " + msg)
+            logger.error("Error:登陆失败 " + msg)
             self.login_flag = 0
             #self.__app.wake_up()
             
@@ -303,7 +303,7 @@ class TraderSpi(traderapi.CTORATstpTraderSpi):
             else:
                 logger.info("Ok: [%s] ExchangeID[%s]请求返回正确，ReqQryMarketData ret[%d]" % (qry_market_data_field.SecurityID, qry_market_data_field.ExchangeID,ret))
                 
-    
+
 
 class TestApp(threading.Thread):
         
@@ -360,7 +360,10 @@ class TestApp(threading.Thread):
                 self.__lock.acquire()
     #            self.cur_data = dict_data
                 self.check_flag = self.monitor_market_data()
-    
+            elif self.__task == "login_front":
+                logger.info("excuting login_front_monitor...")
+                self.__lock.acquire()
+                self.check_flag = self.monitor_login_front()
             elif self.__task == "qry_security":
                 for dict_data in self.testData["QrySecurity"]:
                     logger.info("excuting qry_security...")
@@ -371,7 +374,9 @@ class TestApp(threading.Thread):
             else:
                 logger.warning("输入的任务名称无法识别！")
         else:
-            logger.warning("Error:user_login登录失败，程序退出")
+            msg = "Error:user_login登录前置 %s 失败，程序退出." % self.__address
+            logger.error(msg)
+            ct.send_sms_control('NoLimit',msg)
             sys.exit(1)
 
 
@@ -417,7 +422,7 @@ class TestApp(threading.Thread):
         else:
             error_list = self.QuriyList
             msg = "Error:服务器[%s] traderapi行情查询 接口返回为空" % self.__address
-            logger.info(msg)
+            logger.error(msg)
             ct.send_sms_control("NoLimit",msg)
             
         if TrD_error_list == [] and error_list == []:
@@ -425,7 +430,17 @@ class TestApp(threading.Thread):
             logger.info(msg)
             return 1
         else:
+            msg = "Error,服务器[%s] traderapi行情查询 返回结果不正确 %s" % (self.__address, str(TrD_error_list)+str(error_list))
+            logger.error(msg)
+            #ct.send_sms_control("NoLimit",msg)
             return 0
+
+    #只检查登陆front验证
+    def monitor_login_front(self):
+        #默认会登陆校验
+        time.sleep(1)
+        logger.info("login front success!")
+        return 1
 
                    
     def wake_up(self):
@@ -471,6 +486,7 @@ def main(argv):
                     use -t can input the manul single task.\n \
                     task=["qry_market_data","mem","fpga","db_init","db_trade","errorLog"].  \n \
                     task="qry_market_data" means porcess and port monitor  \n \
+                    task="login_front" means login_front monitor  \n \
                     task="qry_security" means memory monitor  \n \
                     task="db_trade" means db trading data monitor  \n \
                     task="errorLog" means file error log monitor  \n \
@@ -482,7 +498,7 @@ def main(argv):
             elif opt in ("-t", "--task"):
                 manual_task = arg
                 
-        if manual_task not in ["qry_market_data","qry_security"]:
+        if manual_task not in ["qry_market_data","qry_security","login_front"]:
             logger.warning("[task] input is wrong, please try again!")
             sys.exit()
             
@@ -490,11 +506,18 @@ def main(argv):
             logger.info('manual_task is:%s' % manual_task)
             logger.info("Start to excute the api monitor")
             TraderApi_CheckData = JsonData['PyTraderApi']
-            res_flag = 0
-            for CheckData in TraderApi_CheckData:                
-                check_flag = run_app(manual_task, CheckData)
-                res_flag += check_flag
-            if res_flag == len(TraderApi_CheckData):
+            check_result_list = []
+            for CheckData in TraderApi_CheckData: 
+                front_addresses = CheckData['front_addresses']
+                CheckData.pop('front_addresses')
+                for address in front_addresses:
+                    #print("address:",address)
+                    CheckData['address'] = address
+                    #print("CheckData:",CheckData)   
+                    check_flag = run_app(manual_task, CheckData)
+                    check_result_list.append(check_flag)
+            check_result = (sum(check_result_list)==len(check_result_list))
+            if check_result:
                 msg = "Ok,所有服务器 traderapi行情查询 返回结果正确！"
                 logger.info(msg)
                 ct.send_sms_control("NoLimit", msg)

@@ -65,8 +65,19 @@ def main():
 #                ft.download(local_download, remote_dir, hostip, port, username, password, singlefile)
 
         #rtt_run
-        Kfile_dir = ['/home/trade/rtt/2','/home/trade/rtt/3','/home/trade/rtt/4','/home/trade/rtt/5','/home/trade/rtt/7']
+        #Kfile_dir = ['/home/trade/rtt/2','/home/trade/rtt/3','/home/trade/rtt/4','/home/trade/rtt/5','/home/trade/rtt/7']
         #Kfile_dir = ['./rtt_result/2','./rtt_result/3'] #test
+        #生成节点目录，在./config/rtt_node_config.csv中增加节点代码
+        node_info = ct.get_server_config('./config/rtt_node_config.csv')
+        rtt_root_dir = node_info[0][5]
+        node_ids = node_info[0][6]
+        node_list = node_ids.split('|')
+        #Kfile_dir = ['/home/trade/rtt/2','/home/trade/rtt/3','/home/trade/rtt/4','/home/trade/rtt/5','/home/trade/rtt/7']
+        Kfile_dir = []
+        for node_id in node_list:
+            Kfile_dir.append(rtt_root_dir + str(node_id))
+        logger.info(Kfile_dir)
+
         for file_dir in Kfile_dir:
             gen_kernel_rtt(file_dir)
         logger.info("gen rtt file finished")

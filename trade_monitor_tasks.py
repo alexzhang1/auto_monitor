@@ -175,12 +175,24 @@ def traderapi_QMD_monitor_task():
         JsonData = json.load(f)
     
     try:
+        #20200810修改json文件格式
+        # TraderApi_CheckData = JsonData['PyTraderApi']
+        # res_flag = 0
+        # for CheckData in TraderApi_CheckData:                
+        #     check_flag = tdm.run_app("qry_market_data", CheckData)
+        #     res_flag += check_flag
+
         TraderApi_CheckData = JsonData['PyTraderApi']
-        res_flag = 0
-        for CheckData in TraderApi_CheckData:                
-            check_flag = tdm.run_app("qry_market_data", CheckData)
-            res_flag += check_flag
-        if res_flag == len(TraderApi_CheckData):
+        check_result_list = []
+        for CheckData in TraderApi_CheckData: 
+            front_addresses = CheckData['front_addresses']
+            CheckData.pop('front_addresses')
+            for address in front_addresses:
+                CheckData['address'] = address 
+                check_flag = tdm.run_app("qry_market_data", CheckData)
+                check_result_list.append(check_flag)
+        check_result = (sum(check_result_list)==len(check_result_list))
+        if check_result:
             msg = "Ok,所有服务器 traderapi行情查询 返回结果正确！"
             logger.info(msg)
             ct.send_sms_control("NoLimit", msg)
@@ -188,7 +200,35 @@ def traderapi_QMD_monitor_task():
             logger.info("Error: 有服务器 traderapi行情查询 返回结果不正确！")
     except Exception as e:
         msg = str(e)
-        logger.error("mdapi monitor 异常：" + msg)
+        logger.error("tradeapi monitor 异常：" + msg)
+
+
+#通过traderapi验证front是否登陆成功
+def traderapi_login_front_monitor_task():
+    
+    with open('./config/api_monitor_config.json', 'r') as f:
+        JsonData = json.load(f)
+    
+    try:
+        TraderApi_CheckData = JsonData['PyTraderApi']
+        check_result_list = []
+        for CheckData in TraderApi_CheckData: 
+            front_addresses = CheckData['front_addresses']
+            CheckData.pop('front_addresses')
+            for address in front_addresses:
+                CheckData['address'] = address 
+                check_flag = tdm.run_app("login_front", CheckData)
+                check_result_list.append(check_flag)
+        check_result = (sum(check_result_list)==len(check_result_list))
+        if check_result:
+            msg = "Ok,所有服务器 traderapi登陆front成功！"
+            logger.info(msg)
+            ct.send_sms_control("NoLimit", msg)
+        else:
+            logger.info("Error: 有服务器 traderapi登陆front失败！")
+    except Exception as e:
+        msg = str(e)
+        logger.error("tradeapi loggin monitor 异常：" + msg)
 
 
 #tcp连接数监控
@@ -301,13 +341,14 @@ def main(argv):
                 print('python trade_monitor.py -t <task>\n \
                     parameter -t comment: \n \
                     use -t can input the manul single task.\n \
-                    task=["ps_port","mem","fpga","db_init","db_trade","mdapi_qry","traderapi_qmd","errorLog"].  \n \
+                    task=["ps_port","mem","fpga","db_init","db_trade","mdapi_qry","traderapi_qmd","login_front","errorLog"].  \n \
                     task="ps_port" means porcess and port monitor  \n \
                     task="mem" means memory monitor  \n \
                     task="db_trade" means db trading data monitor  \n \
                     task="errorLog" means file error log monitor  \n \
                     task="mdapi_qry" means mdapi qry market data monitor  \n \
                     task="traderapi_qmd" means mdapi qry market data monitor  \n \
+                    task="login_front" means tradeapi login front monitor  \n \
                     task="tcp_con" means tcp connect count monitor  \n \
                     task="self_monitor" means self check monitor  \n \
                     task="smss" means check the sms send status  \n \
@@ -323,7 +364,7 @@ def main(argv):
                 sys.exit()
             elif opt in ("-t", "--task"):
                 manual_task = arg
-            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","tcp_con","self_monitor","smss","sms0","sms100"]:
+            if manual_task not in ["ps_port","mem","fpga","db_init","db_trade","errorLog","mdapi_qry","traderapi_qmd","login_front","tcp_con","self_monitor","smss","sms0","sms100"]:
                 logger.warning("[task] input is wrong, please try again!")
                 sys.exit()
             logger.info('manual_task is:%s' % manual_task)
@@ -353,6 +394,9 @@ def main(argv):
         elif manual_task == 'traderapi_qmd':
             logger.info("Start to excute the traderapi qry_market_data monitor")
             traderapi_QMD_monitor_task()
+        elif manual_task == 'login_front':
+            logger.info("Start to excute the traderapi login_front monitor")
+            traderapi_login_front_monitor_task()
         elif manual_task == 'smss':
             logger.info("查看发送短信状态")
             ct.sms_switch('status')
