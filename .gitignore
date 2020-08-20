@@ -17,6 +17,9 @@ download
 config
 common_*
 test*
+DBdata
+table_template
+rtt_result
 
 # C extensions
 *.so
