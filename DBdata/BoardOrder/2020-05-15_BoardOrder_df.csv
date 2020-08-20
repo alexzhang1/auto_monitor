@@ -1,5 +1,0 @@
-,TradingDay,OrderLocalID,OrderSysID,Direction,Price,VolumeTotalOriginal,VolumeTraded,SecurityID,ExchangeID,InvestorID,SInfo,InvestorName,SecurityName,ShortSecurityName,ExchangeName,DBname
-0,20200515,0100000007,110010100000007,1,221.0000000000,200,200,603986,1,356000012626,,贺中玉,兆易创新,兆易创新,上海证券交易所,wanping1
-1,20200515,0100000011,110010100000011,0,4.5800000000,991100,0,600662,1,356000012906,,谢亦红,强生控股,强生控股,上海证券交易所,wanping1
-2,20200515,0100000002,110010100000002,0,29.7300000000,9300,0,603392,1,397000010887,sw001,卢华耀,万泰生物,万泰生物,上海证券交易所,wanping1
-3,20200515,D360000007,12007D360000007,0,7.0300000000,708800,0,002397,2,356000012906,,谢亦红,梦洁股份,梦洁股份,深圳证券交易所,wanping1
