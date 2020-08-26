@@ -955,8 +955,8 @@ class MonitorServer:
                 logger.info(msg)
             else:
                 total_count = len(sshRes)
-                total_limit = 20
-                single_user_limit = 10
+                total_limit = 500
+                single_user_limit = 150
                 #总连接数大于等于total_limit报警。
                 if total_count >= total_limit:
                     #self.single_info_verify = False

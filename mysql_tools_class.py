@@ -58,16 +58,20 @@ class mysql_tools:
             self.cursor.execute(sql)
             self.conn.commit()
             print('...execute successfull!')
+            flag = 1
         except Exception as e:
             self.conn.rollback()
             # print('...have problem, already rollback!')
             # print(e)
             logger.error('...have problem, already rollback!', exc_info=True)
+            flag = 0
         self.conn.close()
+        return flag
 
 
     def fetchall_sql(self,sql):
         #(cursor, conn) = self.connect_mysql()
+        res = []
         try:
             print(sql)
             self.cursor.execute(sql)
@@ -79,6 +83,22 @@ class mysql_tools:
             # print(e)
             logger.error('...have problem, already rollback!', exc_info=True)
         self.conn.close()
+        return res
+
+    #不关闭连接，给多次查询用
+    def fetchall_sql_noclose(self,sql):
+        #(cursor, conn) = self.connect_mysql()
+        res = []
+        try:
+            print(sql)
+            self.cursor.execute(sql)
+            res = self.cursor.fetchall()
+            print('...execute successfull!')
+        except Exception as e:
+            self.conn.rollback()
+            # print('...have problem, already rollback!')
+            # print(e)
+            logger.error('...have problem, already rollback!', exc_info=True)
         return res
 
 
