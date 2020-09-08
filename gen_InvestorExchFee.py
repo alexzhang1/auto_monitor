@@ -108,7 +108,7 @@ def gen_ExchFee_csv():
         sh_pieces = sh_df[sh_abcsj_col].copy()
         sh_pieces.rename(columns={"TZLB": "feeType", "TZRQ": "tradingDay","ZQZH": "investorID","ZQDM": "securityID","ZQLB": "securityType","JE1": "feeAmount"},inplace = True)
         sh_len = len(sh_pieces)
-        list_ex_id = ['1']*sh_len
+        list_ex_id = ['SH']*sh_len
         sh_pieces.loc[:,'exchangeID'] = list_ex_id
         #sh_pieces['tradingDay'] = sh_pieces['tradingDay'].apply(lambda x: x[:4] + '-' + x[4:6] + '-' + x[6:])
         #sh_pieces['tradingDay'].apply(lambda x: x[:4] + '-' + x[4:6] + '-' + x[6:])
@@ -121,7 +121,7 @@ def gen_ExchFee_csv():
         sz_pieces = sz_df[sz_zsmx_col].copy()
         sz_pieces.rename(columns={"MXYWLB": "feeType", "MXFSRQ": "tradingDay","MXGDDM": "investorID","MXZQDH": "securityID","MXFSJE": "feeAmount"},inplace = True)
         sz_len = len(sz_pieces)
-        list_sz_id = ['2']*sz_len
+        list_sz_id = ['SZ']*sz_len
         sz_pieces.loc[:,'exchangeID'] = list_sz_id
         sz_pieces.loc[:,'securityType'] = ''
         print(sz_pieces['tradingDay'][0])
