@@ -30,7 +30,8 @@ def shdbf_date_str(todays = dt.datetime.now().strftime("%Y%m%d")):
 
 def szdbf_date_dir(todays = dt.datetime.now().strftime("%Y%m%d")):
     m = str(int(todays[4:6]))
-    szdbf_date_dir = 'D-COM/File/' + todays[:4] + '-' + m + '-' + todays[-2:]
+    d = str(int(todays[-2:]))
+    szdbf_date_dir = 'D-COM/File/' + todays[:4] + '-' + m + '-' + d
     return szdbf_date_dir
 
 #红利征税数据表文件名

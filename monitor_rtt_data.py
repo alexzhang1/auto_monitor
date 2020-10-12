@@ -1,0 +1,1 @@
+select TradingDay,mean from rtt_kernel_count where NodeID = '2' and ExchangeKernel = 'SSErtt' order by TradingDay DESC limit 10;

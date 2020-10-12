@@ -973,24 +973,41 @@ def shrink_dblog_monitor(info):
 
             # shrink_sql = '''use download;
             #                 dbcc ShrinkFile (download_log,1024, truncateonly) with NO_INFOMSGS;'''
-            #shrink_sql = '''dbcc ShrinkFile (N'%s',1024, truncateonly);''' % (log_file)
+            shrink_sql = '''dbcc ShrinkFile (N'%s',100, truncateonly);''' % (log_file)
             content_res,title = mt.get_db_data(size_sql, db_info)
             file_size = float(content_res[0][0])
             logger.info("content_res:" + str(content_res))
-            print(file_size)
-            # logger.info("shrink_sql:" + shrink_sql)
+            #print("sssss,2 %6.2f " % file_size)
+            #logger.info("shrink_sql:" + shrink_sql)
             # res,des = mt.fetchall_sql(db_info,shrink_sql)
             #res = mt.execute_sql(db_info,shrink_sql)
             # print("res:", res)
             #print("des:", des)
-
             if file_size > 1024:    
-                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%f MB,请手工压缩文件" % (server, dbname, log_file, file_size)
-                logger.error(msg)
-                ct.send_sms_control("NoLimit", msg)
-                check_flag_list.append(0)
+                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%.2f MB,需要自动压缩" % (server, dbname, log_file, file_size)
+                logger.info(msg)
+                logger.info("shrink_sql:" + shrink_sql)
+                #res,des = mt.fetchall_sql(db_info,shrink_sql)
+                shrink_res = mt.new_execute_sql(db_info,shrink_sql)
+                # logger.info("res:")
+                logger.info(str(shrink_res))
+                # print("des:", des)
+                #再查一次
+                content_res2,title = mt.get_db_data(size_sql, db_info)
+                file_size2 = float(content_res2[0][0])
+                logger.info("content_res:" + str(content_res2))
+                if file_size2 > 1024: 
+                    msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%.2f MB,自动压缩失败，请手工压缩文件" % (server, dbname, log_file, file_size2)
+                    logger.error(msg)
+                    ct.send_sms_control("NoLimit", msg)
+                    check_flag_list.append(0)
+                else:
+                    msg = "服务器 %s, 数据库 %s,日志文件 %s,现在大小为：%.2f MB,自动压缩成功！" % (server, dbname, log_file, file_size2)
+                    logger.info(msg)
+                    #ct.send_sms_control("NoLimit", msg)
+
             else:
-                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%f MB" % (server, dbname, log_file, file_size)
+                msg = "服务器 %s, 数据库 %s,日志文件 %s,大小为：%.2f MB" % (server, dbname, log_file, file_size)
                 logger.info(msg)
                 #ct.send_sms_control("NoLimit", msg)
                 check_flag_list.append(1)

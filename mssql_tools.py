@@ -156,3 +156,30 @@ def get_db_df(sql, db_info):
     db_columns = list(zip(*des))[0]
     db_df = pd.DataFrame(list(res), columns=db_columns)
     return db_df
+
+#解决报错：'Cannot perform a shrinkfile operation inside a user transaction.
+def new_execute_sql(db_info, sql):
+#    (cursor, conn) = connect_mssql()
+    server = db_info[0]
+    user = db_info[1]
+    password = db_info[2]
+    database = db_info[3]
+    try:
+        conn = pymssql.connect(server, user, password, database, login_timeout=5)
+        cursor = conn.cursor()
+    except Exception as e:
+        logger.error('Faild to connect DBServer!', exc_info=True)
+#        print(e)
+        return 0
+    conn.autocommit(True)
+    try:
+        logger.debug(sql)
+        cursor.execute(sql)
+        logger.debug('...execute sql successfull!')
+    except Exception as e:
+        conn.rollback()
+        logger.error('...have problem, already rollback!', exc_info=True)
+        return 0
+    conn.autocommit(False)
+    conn.close()
+    return 1   
